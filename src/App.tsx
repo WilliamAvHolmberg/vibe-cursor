@@ -177,6 +177,9 @@ function App() {
         <group position={[0, 0, 0]} rotation={[0, Math.PI, 0]}>
           <SailingBoat />
         </group>
+        <group position={[-8, 0, -8]} scale={2.5}>
+          <SailingBoat />
+        </group>
         <Dino />
         <OrbitControls />
         <Environment preset="sunset" />
