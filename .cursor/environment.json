@@ -1,0 +1,9 @@
+{
+    "install": "npm install -g localtunnel",
+    "terminals": [
+      {
+        "name": "Test Server",
+        "command": "python3 -m http.server 8000 & sleep 3 && npx localtunnel --port 8000"
+      }
+    ]
+  }
