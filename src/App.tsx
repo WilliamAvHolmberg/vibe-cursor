@@ -174,6 +174,9 @@ function App() {
         <Sky sunPosition={[100, 20, 100]} />
         <Ocean />
         <SailingBoat />
+        <group position={[0, 0, 0]} rotation={[0, Math.PI, 0]}>
+          <SailingBoat />
+        </group>
         <Dino />
         <OrbitControls />
         <Environment preset="sunset" />
