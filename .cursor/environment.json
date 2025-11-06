@@ -1,9 +1,13 @@
 {
-    "install": "npm install -g localtunnel",
-    "terminals": [
-      {
-        "name": "Test Server",
-        "command": "python3 -m http.server 8000 & sleep 3 && npx localtunnel --port 8000"
-      }
-    ]
-  }
+  "install": "npm install && curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared && chmod +x cloudflared",
+  "terminals": [
+    {
+      "name": "Dev Server",
+      "command": "npm run dev -- --host 0.0.0.0"
+    },
+    {
+      "name": "Cloudflare Tunnel",
+      "command": "sleep 5 && ./cloudflared tunnel --url http://localhost:5173"
+    }
+  ]
+}
