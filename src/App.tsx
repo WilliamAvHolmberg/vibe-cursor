@@ -83,10 +83,10 @@ function Dino() {
   })
 
   return (
-    <group ref={dinoRef} position={[-5, 0, -5]}>
+    <group ref={dinoRef} position={[6, 0, 0]}>
       {/* Body */}
       <mesh position={[0, 1, 0]}>
-        <boxGeometry args={[1.5, 1.2, 2.5]} />
+        <boxGeometry args={[2, 1.5, 3]} />
         <meshStandardMaterial color="#90EE90" />
       </mesh>
       
