@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  cursorApiKey  String
+  email         String?   @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  sessions      Session[]
+  orchestrations Orchestration[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum OrchestrationStatus {
+  PLANNING
+  AWAITING_FOLLOWUP
+  AWAITING_APPROVAL
+  EXECUTING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Orchestration {
+  id              String               @id @default(cuid())
+  userId          String
+  repository      String
+  ref             String               @default("main")
+  initialPrompt   String
+  status          OrchestrationStatus
+  planningOutput  Json?
+  approvedPlan    Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  completedAt     DateTime?
+  
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  followUpMessages FollowUpMessage[]
+  agents          Agent[]
+  events          OrchestrationEvent[]
+}
+
+model FollowUpMessage {
+  id               String         @id @default(cuid())
+  orchestrationId  String
+  role             String         // 'agent' or 'user'
+  content          String
+  createdAt        DateTime       @default(now())
+  
+  orchestration    Orchestration  @relation(fields: [orchestrationId], references: [id], onDelete: Cascade)
+}
+
+enum AgentStatus {
+  PENDING
+  CREATING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Agent {
+  id                String         @id @default(cuid())
+  orchestrationId   String
+  parentAgentId     String?        
+  cursorAgentId     String?        // Cloud agent ID from Cursor API
+  name              String
+  prompt            String
+  status            AgentStatus
+  branchName        String?
+  pullRequestUrl    String?
+  error             String?
+  metadata          Json?          // For storing task-specific data
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  completedAt       DateTime?
+  
+  orchestration     Orchestration  @relation(fields: [orchestrationId], references: [id], onDelete: Cascade)
+  parentAgent       Agent?         @relation("AgentHierarchy", fields: [parentAgentId], references: [id])
+  subAgents         Agent[]        @relation("AgentHierarchy")
+  statusUpdates     AgentStatusUpdate[]
+}
+
+model AgentStatusUpdate {
+  id        String   @id @default(cuid())
+  agentId   String
+  status    String
+  message   String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+model OrchestrationEvent {
+  id               String         @id @default(cuid())
+  orchestrationId  String
+  type             String         // 'status_change', 'agent_spawned', 'question_asked', etc.
+  data             Json
+  createdAt        DateTime       @default(now())
+  
+  orchestration    Orchestration  @relation(fields: [orchestrationId], references: [id], onDelete: Cascade)
+}
