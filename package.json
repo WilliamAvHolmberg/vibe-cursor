@@ -1,33 +1,20 @@
 {
-  "name": "my-app",
-  "private": true,
+  "name": "cursor-orchestrator",
   "version": "0.0.0",
-  "type": "module",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@react-three/drei": "^10.7.6",
-    "@react-three/fiber": "^9.4.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "three": "^0.181.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.36.0",
-    "@types/node": "^24.6.0",
-    "@types/react": "^19.1.16",
-    "@types/react-dom": "^19.1.9",
-    "@vitejs/plugin-react": "^5.0.4",
-    "eslint": "^9.36.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.22",
-    "globals": "^16.4.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.45.0",
-    "vite": "^7.1.7"
+    "dev:web": "npm run dev -w packages/web",
+    "dev:server": "npm run dev -w packages/server",
+    "build:web": "npm run build -w packages/web",
+    "build:server": "npm run build -w packages/server",
+    "lint:web": "npm run lint -w packages/web",
+    "lint:server": "npm run lint -w packages/server",
+    "test:web": "npm test -w packages/web",
+    "test:server": "npm test -w packages/server",
+    "dev": "npm run dev:server",
+    "build": "npm run build:server && npm run build:web"
   }
 }
