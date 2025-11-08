@@ -39,22 +39,23 @@ enum OrchestrationStatus {
 }
 
 model Orchestration {
-  id              String               @id @default(cuid())
-  userId          String
-  repository      String
-  ref             String               @default("main")
-  initialPrompt   String
-  status          OrchestrationStatus
-  planningOutput  Json?
-  approvedPlan    Json?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  completedAt     DateTime?
+  id                    String               @id @default(cuid())
+  userId                String
+  repository            String
+  ref                   String               @default("main")
+  initialPrompt         String
+  status                OrchestrationStatus
+  planningAgentId       String?              // Cursor agent ID for planning phase
+  planningOutput        Json?
+  approvedPlan          Json?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  completedAt           DateTime?
   
-  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  followUpMessages FollowUpMessage[]
-  agents          Agent[]
-  events          OrchestrationEvent[]
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  followUpMessages      FollowUpMessage[]
+  agents                Agent[]
+  events                OrchestrationEvent[]
 }
 
 model FollowUpMessage {

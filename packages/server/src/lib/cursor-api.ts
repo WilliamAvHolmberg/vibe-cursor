@@ -116,4 +116,11 @@ export class CursorApiClient {
       method: 'POST',
     });
   }
+
+  async addFollowUp(agentId: string, prompt: { text: string; images?: Array<{ data: string; dimension?: { width: number; height: number } }> }): Promise<{ id: string }> {
+    return this.request<{ id: string }>(`/agents/${agentId}/followup`, {
+      method: 'POST',
+      body: JSON.stringify({ prompt }),
+    });
+  }
 }

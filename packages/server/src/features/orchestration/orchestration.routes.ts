@@ -90,6 +90,11 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
       return res.status(404).json({ error: 'Orchestration not found' });
     }
     
+    if (req.cursorApiKey) {
+      const service = new OrchestrationService(req.cursorApiKey);
+      await service.resumeOrchestrationIfNeeded(req.params.id);
+    }
+    
     res.json(orchestration);
   } catch (error) {
     next(error);

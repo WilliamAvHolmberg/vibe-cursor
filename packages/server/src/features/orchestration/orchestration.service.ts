@@ -11,6 +11,8 @@ import { ApiError } from '../../lib/validation.js';
 
 export class OrchestrationService {
   private cursorClient: CursorApiClient;
+  private static activePlanningPolls = new Set<string>();
+  private static activeExecutionMonitors = new Set<string>();
 
   constructor(cursorApiKey: string) {
     this.cursorClient = new CursorApiClient(cursorApiKey);
@@ -41,6 +43,32 @@ export class OrchestrationService {
       console.error('Error in planning phase:', err);
       this.handleOrchestrationError(orchestration.id, err);
     });
+
+    return orchestration;
+  }
+
+  async resumeOrchestrationIfNeeded(orchestrationId: string) {
+    const orchestration = await prisma.orchestration.findUnique({
+      where: { id: orchestrationId },
+      include: { agents: true }
+    });
+
+    if (!orchestration) {
+      throw new ApiError(404, 'Orchestration not found');
+    }
+
+    if (orchestration.status === 'PLANNING' && orchestration.planningAgentId) {
+      console.log(`Resuming planning polling for orchestration ${orchestrationId}`);
+      this.pollPlanningAgent(orchestrationId, orchestration.planningAgentId).catch(err => {
+        console.error('Error resuming planning polling:', err);
+        this.handleOrchestrationError(orchestrationId, err);
+      });
+    } else if (orchestration.status === 'EXECUTING' && orchestration.agents.length > 0) {
+      console.log(`Resuming execution monitoring for orchestration ${orchestrationId}`);
+      this.monitorExecution(orchestrationId).catch(err => {
+        console.error('Error resuming execution monitoring:', err);
+      });
+    }
 
     return orchestration;
   }
@@ -87,6 +115,11 @@ export class OrchestrationService {
       }
     });
 
+    await prisma.orchestration.update({
+      where: { id: orchestrationId },
+      data: { planningAgentId: cursorAgent.id }
+    });
+
     await this.createEvent(orchestrationId, 'planning_agent_created', {
       cursorAgentId: cursorAgent.id
     });
@@ -98,32 +131,43 @@ export class OrchestrationService {
   }
 
   private async pollPlanningAgent(orchestrationId: string, cursorAgentId: string) {
-    let attempts = 0;
-    const maxAttempts = 120;
-    const pollInterval = 5000;
-
-    while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      attempts++;
-
-      try {
-        const agent = await this.cursorClient.getAgent(cursorAgentId);
-        
-        if (agent.status === 'COMPLETED' || agent.status === 'completed') {
-          const conversation = await this.cursorClient.getAgentConversation(cursorAgentId);
-          await this.processPlanningOutput(orchestrationId, conversation);
-          break;
-        } else if (agent.status === 'FAILED' || agent.status === 'failed') {
-          throw new Error('Planning agent failed');
-        }
-      } catch (error) {
-        console.error('Error polling agent:', error);
-        throw error;
-      }
+    if (OrchestrationService.activePlanningPolls.has(orchestrationId)) {
+      console.log(`Already polling planning agent for orchestration ${orchestrationId}`);
+      return;
     }
 
-    if (attempts >= maxAttempts) {
-      throw new Error('Planning agent timeout');
+    OrchestrationService.activePlanningPolls.add(orchestrationId);
+
+    try {
+      let attempts = 0;
+      const maxAttempts = 120;
+      const pollInterval = 5000;
+
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        attempts++;
+
+        try {
+          const agent = await this.cursorClient.getAgent(cursorAgentId);
+          console.log('Agent status:', agent.status);
+          if (agent.status === 'FINISHED' || agent.status === 'finished') {
+            const conversation = await this.cursorClient.getAgentConversation(cursorAgentId);
+            await this.processPlanningOutput(orchestrationId, conversation);
+            break;
+          } else if (agent.status === 'FAILED' || agent.status === 'failed') {
+            throw new Error('Planning agent failed');
+          }
+        } catch (error) {
+          console.error('Error polling agent:', error);
+          throw error;
+        }
+      }
+
+      if (attempts >= maxAttempts) {
+        throw new Error('Planning agent timeout');
+      }
+    } finally {
+      OrchestrationService.activePlanningPolls.delete(orchestrationId);
     }
   }
 
@@ -203,11 +247,16 @@ export class OrchestrationService {
     answers: Record<string, string>
   ) {
     const orchestration = await prisma.orchestration.findUnique({
-      where: { id: orchestrationId }
+      where: { id: orchestrationId },
+      include: { followUpMessages: true }
     });
 
     if (!orchestration || orchestration.status !== 'AWAITING_FOLLOWUP') {
       throw new ApiError(400, 'Invalid orchestration state');
+    }
+
+    if (!orchestration.planningAgentId) {
+      throw new ApiError(400, 'No planning agent found');
     }
 
     for (const [questionId, answer] of Object.entries(answers)) {
@@ -220,6 +269,12 @@ export class OrchestrationService {
       });
     }
 
+    const answersText = Object.values(answers).join('\n\n');
+
+    await this.cursorClient.addFollowUp(orchestration.planningAgentId, {
+      text: `Here are the answers to your questions:\n\n${answersText}\n\nPlease continue with the planning.`
+    });
+
     await prisma.orchestration.update({
       where: { id: orchestrationId },
       data: { status: 'PLANNING' }
@@ -227,8 +282,8 @@ export class OrchestrationService {
 
     await this.createEvent(orchestrationId, 'followup_answered', { answers });
 
-    this.startPlanningPhase(orchestrationId).catch(err => {
-      console.error('Error restarting planning:', err);
+    this.pollPlanningAgent(orchestrationId, orchestration.planningAgentId).catch(err => {
+      console.error('Error polling planning agent after followup:', err);
       this.handleOrchestrationError(orchestrationId, err);
     });
   }
@@ -377,85 +432,96 @@ export class OrchestrationService {
   }
 
   private async monitorExecution(orchestrationId: string) {
-    const pollInterval = 10000;
-    
-    while (true) {
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    if (OrchestrationService.activeExecutionMonitors.has(orchestrationId)) {
+      console.log(`Already monitoring execution for orchestration ${orchestrationId}`);
+      return;
+    }
 
-      const agents = await prisma.agent.findMany({
-        where: { orchestrationId }
-      });
+    OrchestrationService.activeExecutionMonitors.add(orchestrationId);
 
-      if (agents.length === 0) break;
+    try {
+      const pollInterval = 10000;
+      
+      while (true) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
 
-      let allCompleted = true;
-      let anyFailed = false;
+        const agents = await prisma.agent.findMany({
+          where: { orchestrationId }
+        });
 
-      for (const agent of agents) {
-        if (!agent.cursorAgentId) continue;
+        if (agents.length === 0) break;
 
-        try {
-          const cursorAgent = await this.cursorClient.getAgent(agent.cursorAgentId);
-          
-          const newStatus = this.mapCursorStatus(cursorAgent.status);
-          
-          if (agent.status !== newStatus) {
-            await prisma.agent.update({
-              where: { id: agent.id },
-              data: { 
-                status: newStatus,
-                pullRequestUrl: cursorAgent.target?.url
-              }
-            });
+        let allCompleted = true;
+        let anyFailed = false;
 
-            await prisma.agentStatusUpdate.create({
-              data: {
-                agentId: agent.id,
-                status: newStatus,
-                message: `Status changed to ${newStatus}`
-              }
-            });
+        for (const agent of agents) {
+          if (!agent.cursorAgentId) continue;
 
-            broadcastToOrchestration(orchestrationId, {
-              type: 'agent_status_update',
-              agent: {
-                id: agent.id,
-                cursorAgentId: agent.cursorAgentId,
-                name: agent.name,
-                status: newStatus,
-                pullRequestUrl: cursorAgent.target?.url
-              }
-            });
+          try {
+            const cursorAgent = await this.cursorClient.getAgent(agent.cursorAgentId);
+            
+            const newStatus = this.mapCursorStatus(cursorAgent.status);
+            
+            if (agent.status !== newStatus) {
+              await prisma.agent.update({
+                where: { id: agent.id },
+                data: { 
+                  status: newStatus,
+                  pullRequestUrl: cursorAgent.target?.url
+                }
+              });
+
+              await prisma.agentStatusUpdate.create({
+                data: {
+                  agentId: agent.id,
+                  status: newStatus,
+                  message: `Status changed to ${newStatus}`
+                }
+              });
+
+              broadcastToOrchestration(orchestrationId, {
+                type: 'agent_status_update',
+                agent: {
+                  id: agent.id,
+                  cursorAgentId: agent.cursorAgentId,
+                  name: agent.name,
+                  status: newStatus,
+                  pullRequestUrl: cursorAgent.target?.url
+                }
+              });
+            }
+
+            if (newStatus !== 'COMPLETED') allCompleted = false;
+            if (newStatus === 'FAILED') anyFailed = true;
+          } catch (error) {
+            console.error(`Error checking agent ${agent.id}:`, error);
           }
+        }
 
-          if (newStatus !== 'COMPLETED') allCompleted = false;
-          if (newStatus === 'FAILED') anyFailed = true;
-        } catch (error) {
-          console.error(`Error checking agent ${agent.id}:`, error);
+        if (allCompleted || anyFailed) {
+          const finalStatus = anyFailed ? 'FAILED' : 'COMPLETED';
+          await prisma.orchestration.update({
+            where: { id: orchestrationId },
+            data: { 
+              status: finalStatus,
+              completedAt: new Date()
+            }
+          });
+
+          await this.createEvent(orchestrationId, 'orchestration_completed', {
+            status: finalStatus
+          });
+
+          broadcastToOrchestration(orchestrationId, {
+            type: 'orchestration_completed',
+            status: finalStatus
+          });
+
+          break;
         }
       }
-
-      if (allCompleted || anyFailed) {
-        const finalStatus = anyFailed ? 'FAILED' : 'COMPLETED';
-        await prisma.orchestration.update({
-          where: { id: orchestrationId },
-          data: { 
-            status: finalStatus,
-            completedAt: new Date()
-          }
-        });
-
-        await this.createEvent(orchestrationId, 'orchestration_completed', {
-          status: finalStatus
-        });
-
-        broadcastToOrchestration(orchestrationId, {
-          type: 'orchestration_completed',
-          status: finalStatus
-        });
-
-        break;
-      }
+    } finally {
+      OrchestrationService.activeExecutionMonitors.delete(orchestrationId);
     }
   }
 
