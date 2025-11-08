@@ -242,6 +242,10 @@ export class OrchestrationService {
     }
   }
 
+  async getAgentConversation(cursorAgentId: string) {
+    return this.cursorClient.getAgentConversation(cursorAgentId);
+  }
+
   async answerFollowUpQuestions(
     orchestrationId: string,
     answers: Record<string, string>

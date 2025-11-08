@@ -201,4 +201,34 @@ router.post('/:id/cancel', async (req: AuthRequest, res, next) => {
   }
 });
 
+router.get('/:id/conversation', async (req: AuthRequest, res, next) => {
+  try {
+    if (!req.cursorApiKey || !req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const orchestration = await prisma.orchestration.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.userId
+      }
+    });
+    
+    if (!orchestration) {
+      return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    if (!orchestration.planningAgentId) {
+      return res.json({ messages: [] });
+    }
+    
+    const service = new OrchestrationService(req.cursorApiKey);
+    const conversation = await service.getAgentConversation(orchestration.planningAgentId);
+    
+    res.json(conversation);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export { router as orchestrationRouter };

@@ -27,25 +27,25 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --background: 240 10% 11%;
+    --foreground: 0 0% 95%;
+    --card: 240 10% 13%;
+    --card-foreground: 0 0% 95%;
+    --popover: 240 10% 13%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 0% 95%;
+    --primary-foreground: 240 10% 11%;
+    --secondary: 240 6% 20%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 240 6% 20%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 6% 20%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 95%;
+    --border: 240 6% 20%;
+    --input: 240 6% 20%;
+    --ring: 240 5% 64.9%;
   }
 }
 
@@ -55,5 +55,53 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  html {
+    color-scheme: dark;
+  }
+  
+  .prose {
+    @apply text-gray-100;
+  }
+  
+  .prose p {
+    @apply text-gray-300 leading-relaxed;
+  }
+  
+  .prose code {
+    @apply bg-gray-800 text-purple-300 px-1.5 py-0.5 rounded text-sm;
+  }
+  
+  .prose pre {
+    @apply bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 overflow-x-auto;
+  }
+  
+  .prose pre code {
+    @apply bg-transparent p-0 text-gray-300 text-sm;
+  }
+  
+  .prose strong {
+    @apply text-gray-100 font-semibold;
+  }
+  
+  .prose ul, .prose ol {
+    @apply text-gray-300;
+  }
+  
+  .prose li {
+    @apply text-gray-300;
+  }
+  
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    @apply text-gray-100 font-semibold;
+  }
+  
+  .prose a {
+    @apply text-blue-400 hover:text-blue-300 underline;
+  }
+  
+  .prose blockquote {
+    @apply border-l-4 border-gray-700 pl-4 italic text-gray-400;
   }
 }

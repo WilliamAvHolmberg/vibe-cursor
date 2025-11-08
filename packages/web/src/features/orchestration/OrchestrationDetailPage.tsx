@@ -1,24 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useWebSocket } from '@/lib/use-websocket';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   ArrowLeft,
   Loader2,
   CheckCircle2,
   XCircle,
   AlertCircle,
-  GitBranch,
+  Sparkles,
+  User,
+  Bot,
   Clock,
-  Users,
-  MessageCircle,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
+
+interface ConversationMessage {
+  id: string;
+  type: 'user_message' | 'assistant_message' | 'system' | 'questions' | 'plan' | 'agent_update';
+  text?: string;
+  timestamp: Date;
+  metadata?: any;
+}
 
 export function OrchestrationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +37,7 @@ export function OrchestrationDetailPage() {
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: orchestration, refetch } = useQuery({
     queryKey: ['orchestration', id],
@@ -34,42 +46,159 @@ export function OrchestrationDetailPage() {
       return response.data;
     },
     enabled: !!id,
-    refetchInterval: 10000,
+    refetchInterval: 5000,
+  });
+
+  const { data: conversationData } = useQuery({
+    queryKey: ['conversation', id],
+    queryFn: async () => {
+      const response = await api.orchestration.getConversation(id!);
+      return response.data;
+    },
+    enabled: !!id && !!orchestration?.planningAgentId,
+    refetchInterval: 5000,
   });
 
   const { lastMessage } = useWebSocket(id);
 
   useEffect(() => {
     if (lastMessage) {
-      console.log('WebSocket message:', lastMessage);
       refetch();
-      
-      if (lastMessage.type === 'questions_asked') {
-        toast({
-          title: 'Follow-up Questions',
-          description: 'The agent has some questions for you',
+    }
+  }, [lastMessage, refetch]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conversationData, orchestration]);
+
+  const buildConversationMessages = (): ConversationMessage[] => {
+    const messages: ConversationMessage[] = [];
+
+    if (!orchestration) return messages;
+
+    messages.push({
+      id: 'user-initial',
+      type: 'user_message',
+      text: orchestration.initialPrompt,
+      timestamp: new Date(orchestration.createdAt),
+    });
+
+    if (conversationData?.messages) {
+      conversationData.messages.forEach((msg: any, idx: number) => {
+        if (msg.type === 'user_message') {
+          return;
+        }
+        
+        messages.push({
+          id: `conv-${idx}`,
+          type: msg.type === 'user_message' ? 'user_message' : 'assistant_message',
+          text: msg.text,
+          timestamp: new Date(),
         });
-      } else if (lastMessage.type === 'plan_ready') {
-        toast({
-          title: 'Plan Ready',
-          description: 'Review the execution plan',
-        });
-      } else if (lastMessage.type === 'orchestration_completed') {
-        toast({
-          title: 'Orchestration Complete',
-          description: `Status: ${lastMessage.status}`,
-          variant: lastMessage.status === 'COMPLETED' ? 'default' : 'destructive',
+      });
+    }
+
+    if (orchestration.status === 'AWAITING_FOLLOWUP') {
+      const questions = orchestration.planningOutput?.content?.questions || [];
+      if (questions.length > 0) {
+        messages.push({
+          id: 'questions',
+          type: 'questions',
+          timestamp: new Date(),
+          metadata: { questions },
         });
       }
     }
-  }, [lastMessage]);
+
+    if (orchestration.followUpMessages && orchestration.followUpMessages.length > 0) {
+      const userAnswers = orchestration.followUpMessages.filter((msg: any) => msg.role === 'user');
+      const questions = orchestration.planningOutput?.content?.questions || [];
+      
+      if (userAnswers.length > 0) {
+        let answersText = '';
+        
+        if (questions.length === userAnswers.length) {
+          answersText = questions.map((q: any, idx: number) => 
+            `**Q${idx + 1}:** ${q.question}\n**A:** ${userAnswers[idx]?.content || ''}`
+          ).join('\n\n');
+        } else {
+          answersText = userAnswers.map((msg: any, idx: number) => 
+            `**Answer ${idx + 1}:** ${msg.content}`
+          ).join('\n\n');
+        }
+        
+        messages.push({
+          id: 'user-answers',
+          type: 'user_message',
+          text: answersText,
+          timestamp: new Date(userAnswers[userAnswers.length - 1].createdAt),
+        });
+      }
+    }
+
+    if (orchestration.status === 'PLANNING') {
+      messages.push({
+        id: 'system-planning',
+        type: 'system',
+        text: 'Planning agent is analyzing your request...',
+        timestamp: new Date(),
+      });
+    }
+
+    if (orchestration.status === 'AWAITING_APPROVAL') {
+      messages.push({
+        id: 'plan',
+        type: 'plan',
+        timestamp: new Date(),
+        metadata: { plan: orchestration.planningOutput?.content },
+      });
+    }
+
+    if (orchestration.status === 'EXECUTING') {
+      messages.push({
+        id: 'system-executing',
+        type: 'system',
+        text: `Executing plan with ${orchestration.agents?.length || 0} agent(s)...`,
+        timestamp: new Date(),
+      });
+
+      orchestration.agents?.forEach((agent: any, idx: number) => {
+        messages.push({
+          id: `agent-${idx}`,
+          type: 'agent_update',
+          timestamp: new Date(agent.createdAt),
+          metadata: { agent },
+        });
+      });
+    }
+
+    if (orchestration.status === 'COMPLETED') {
+      messages.push({
+        id: 'system-completed',
+        type: 'system',
+        text: '✓ Orchestration completed successfully!',
+        timestamp: new Date(orchestration.completedAt || new Date()),
+      });
+    }
+
+    if (orchestration.status === 'FAILED') {
+      messages.push({
+        id: 'system-failed',
+        type: 'system',
+        text: '✗ Orchestration failed.',
+        timestamp: new Date(),
+      });
+    }
+
+    return messages;
+  };
 
   const handleAnswerQuestions = async () => {
     if (!id) return;
 
     const questions = orchestration?.planningOutput?.content?.questions || [];
     const missingAnswers = questions.filter((q: any) => !answers[q.id]?.trim());
-    
+
     if (missingAnswers.length > 0) {
       toast({
         title: 'Missing Answers',
@@ -82,10 +211,6 @@ export function OrchestrationDetailPage() {
     setSubmitting(true);
     try {
       await api.orchestration.answer(id, answers);
-      toast({
-        title: 'Answers Submitted',
-        description: 'Agent is re-planning with your responses',
-      });
       setAnswers({});
       refetch();
     } catch (error: any) {
@@ -105,10 +230,6 @@ export function OrchestrationDetailPage() {
     setSubmitting(true);
     try {
       await api.orchestration.approve(id);
-      toast({
-        title: 'Plan Approved',
-        description: 'Agent execution started',
-      });
       refetch();
     } catch (error: any) {
       toast({
@@ -121,239 +242,380 @@ export function OrchestrationDetailPage() {
     }
   };
 
-  const handleCancel = async () => {
-    if (!id) return;
+  const getStatusBadge = () => {
+    if (!orchestration) return null;
 
-    try {
-      await api.orchestration.cancel(id);
-      toast({
-        title: 'Orchestration Cancelled',
-        description: 'All running agents have been cancelled',
-      });
-      refetch();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Failed to cancel',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const badges: Record<string, { icon: any; color: string; text: string }> = {
-      PLANNING: { icon: Loader2, color: 'text-blue-500', text: 'Planning' },
-      AWAITING_FOLLOWUP: { icon: MessageCircle, color: 'text-yellow-500', text: 'Awaiting Answers' },
-      AWAITING_APPROVAL: { icon: AlertCircle, color: 'text-yellow-500', text: 'Awaiting Approval' },
-      EXECUTING: { icon: Loader2, color: 'text-blue-500', text: 'Executing' },
-      COMPLETED: { icon: CheckCircle2, color: 'text-green-500', text: 'Completed' },
-      FAILED: { icon: XCircle, color: 'text-red-500', text: 'Failed' },
-      CANCELLED: { icon: XCircle, color: 'text-gray-500', text: 'Cancelled' },
+    const statusConfig: Record<
+      string,
+      { label: string; icon: any; className: string; animate?: boolean }
+    > = {
+      PLANNING: {
+        label: 'Planning',
+        icon: Loader2,
+        className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+        animate: true,
+      },
+      AWAITING_FOLLOWUP: {
+        label: 'Awaiting Response',
+        icon: AlertCircle,
+        className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+      },
+      AWAITING_APPROVAL: {
+        label: 'Awaiting Approval',
+        icon: AlertCircle,
+        className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+      },
+      EXECUTING: {
+        label: 'Executing',
+        icon: Loader2,
+        className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+        animate: true,
+      },
+      COMPLETED: {
+        label: 'Completed',
+        icon: CheckCircle2,
+        className: 'bg-green-500/10 text-green-400 border-green-500/20',
+      },
+      FAILED: {
+        label: 'Failed',
+        icon: XCircle,
+        className: 'bg-red-500/10 text-red-400 border-red-500/20',
+      },
+      CANCELLED: {
+        label: 'Cancelled',
+        icon: XCircle,
+        className: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+      },
     };
 
-    const badge = badges[status] || badges.PLANNING;
-    const Icon = badge.icon;
-    const animate = ['PLANNING', 'EXECUTING'].includes(status);
+    const config = statusConfig[orchestration.status] || statusConfig.PLANNING;
+    const Icon = config.icon;
 
     return (
-      <div className="flex items-center gap-2">
-        <Icon className={`h-5 w-5 ${badge.color} ${animate ? 'animate-spin' : ''}`} />
-        <span className="font-semibold">{badge.text}</span>
-      </div>
+      <Badge className={`${config.className} border`}>
+        <Icon className={`h-3 w-3 mr-1 ${config.animate ? 'animate-spin' : ''}`} />
+        {config.label}
+      </Badge>
     );
   };
 
   if (!orchestration) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-[#1c1c1c]">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
       </div>
     );
   }
 
-  const questions = orchestration.planningOutput?.content?.questions || [];
-  const plan = orchestration.planningOutput?.content;
+  const messages = buildConversationMessages();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-[#1c1c1c] flex flex-col">
+      <div className="border-b border-gray-800 bg-[#252525]">
+        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              className="hover:bg-gray-700"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-xl font-bold">Orchestration Details</h1>
-              {getStatusBadge(orchestration.status)}
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-purple-400" />
+              <span className="font-semibold text-gray-100">Orchestrator Agent</span>
+              {getStatusBadge()}
             </div>
           </div>
-          {['PLANNING', 'EXECUTING', 'AWAITING_FOLLOWUP', 'AWAITING_APPROVAL'].includes(
-            orchestration.status
-          ) && (
-            <Button variant="destructive" onClick={handleCancel}>
-              Cancel Orchestration
-            </Button>
-          )}
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Task Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap">{orchestration.initialPrompt}</p>
-            <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <GitBranch className="h-4 w-4" />
-                {orchestration.repository}
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                Created {new Date(orchestration.createdAt).toLocaleString()}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+          {messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              answers={answers}
+              setAnswers={setAnswers}
+              onSubmitAnswers={handleAnswerQuestions}
+              onApprovePlan={handleApprovePlan}
+              submitting={submitting}
+            />
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-        {orchestration.status === 'AWAITING_FOLLOWUP' && questions.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Follow-up Questions</CardTitle>
-              <CardDescription>
-                The agent needs more information to create an accurate plan
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {questions.map((q: any) => (
-                <div key={q.id} className="space-y-2">
-                  <Label htmlFor={q.id}>{q.question}</Label>
-                  {q.context && <p className="text-sm text-muted-foreground">{q.context}</p>}
-                  <Input
-                    id={q.id}
-                    value={answers[q.id] || ''}
-                    onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                    placeholder="Your answer..."
-                    disabled={submitting}
-                  />
-                </div>
-              ))}
-              <Button onClick={handleAnswerQuestions} disabled={submitting}>
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit Answers
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+interface MessageBubbleProps {
+  message: ConversationMessage;
+  answers: Record<string, string>;
+  setAnswers: (answers: Record<string, string>) => void;
+  onSubmitAnswers: () => void;
+  onApprovePlan: () => void;
+  submitting: boolean;
+}
 
-        {orchestration.status === 'AWAITING_APPROVAL' && plan && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Execution Plan</CardTitle>
-              <CardDescription>{plan.summary}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-semibold mb-2">Tasks:</h3>
-                <div className="space-y-2">
-                  {plan.tasks?.map((task: any, idx: number) => (
-                    <div key={task.id} className="border rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        <span className="font-mono text-sm text-muted-foreground">#{idx + 1}</span>
-                        <div className="flex-1">
-                          <p className="font-medium">{task.description}</p>
-                          <p className="text-sm text-muted-foreground mt-1">{task.reasoning}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span
-                              className={`text-xs px-2 py-1 rounded ${
-                                task.estimatedComplexity === 'high'
-                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                  : task.estimatedComplexity === 'medium'
-                                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                  : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              }`}
-                            >
-                              {task.estimatedComplexity}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+function MessageBubble({
+  message,
+  answers,
+  setAnswers,
+  onSubmitAnswers,
+  onApprovePlan,
+  submitting,
+}: MessageBubbleProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
 
-              {plan.requiresSubAgents && plan.subAgents && (
-                <div>
-                  <h3 className="font-semibold mb-2 flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Sub-Agents ({plan.subAgents.length}):
-                  </h3>
-                  <div className="space-y-2">
-                    {plan.subAgents.map((agent: any) => (
-                      <div key={agent.id} className="border rounded-lg p-3">
-                        <h4 className="font-medium">{agent.name}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">{agent.description}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Tasks: {agent.tasks?.length || 0}
-                        </p>
-                      </div>
-                    ))}
+  if (message.type === 'user_message') {
+    return (
+      <div className="flex gap-4 items-start">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+          <User className="h-4 w-4 text-blue-400" />
+        </div>
+        <div className="flex-1 space-y-1">
+          <div className="text-sm text-gray-400">You</div>
+          <div className="text-gray-100 whitespace-pre-wrap">{message.text}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === 'assistant_message') {
+    const isJsonMessage = message.text?.trim().startsWith('{') || message.text?.trim().startsWith('```json');
+    
+    let summary = message.text && message.text.length > 100 
+      ? message.text.substring(0, 100) + '...'
+      : message.text;
+    
+    if (isJsonMessage) {
+      try {
+        let jsonText = message.text?.trim() || '';
+        if (jsonText.startsWith('```json')) {
+          jsonText = jsonText.replace(/```json\n?/g, '').replace(/```$/g, '').trim();
+        }
+        const parsed = JSON.parse(jsonText);
+        
+        if (parsed.type === 'questions') {
+          summary = 'Asked clarifying questions';
+        } else if (parsed.type === 'plan') {
+          summary = 'Created execution plan';
+        }
+      } catch (e) {
+        summary = 'Sent structured response';
+      }
+    }
+
+    return (
+      <div className="flex gap-4 items-start">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+          <Bot className="h-4 w-4 text-purple-400" />
+        </div>
+        <div className="flex-1 space-y-2">
+          <div className="text-sm text-gray-400">Planning Agent</div>
+          
+          {isJsonMessage ? (
+            <div className="space-y-2">
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                <span className="text-sm italic">{summary}</span>
+              </button>
+              
+              {isExpanded && (
+                <div className="bg-[#252525] border border-gray-800 rounded-lg p-4 overflow-x-auto">
+                  <div className="prose prose-invert prose-sm max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {message.text || ''}
+                    </ReactMarkdown>
                   </div>
                 </div>
               )}
+            </div>
+          ) : (
+            <div className="prose prose-invert prose-sm max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.text || ''}
+              </ReactMarkdown>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-              <Button onClick={handleApprovePlan} disabled={submitting}>
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Approve & Start Execution
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+  if (message.type === 'system') {
+    return (
+      <div className="flex gap-4 items-start">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+          <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+        </div>
+        <div className="flex-1 space-y-1">
+          <div className="text-sm text-gray-500 italic">{message.text}</div>
+        </div>
+      </div>
+    );
+  }
 
-        {orchestration.agents && orchestration.agents.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Agents</CardTitle>
-              <CardDescription>Active and completed agents</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {orchestration.agents.map((agent: any) => (
-                  <div key={agent.id} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between">
+  if (message.type === 'questions') {
+    const questions = message.metadata?.questions || [];
+    return (
+      <div className="flex gap-4 items-start">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+          <Bot className="h-4 w-4 text-purple-400" />
+        </div>
+        <div className="flex-1 space-y-3">
+          <div className="text-sm text-gray-400">Planning Agent</div>
+          <div className="text-gray-100">I need some clarification to create an accurate plan:</div>
+          <div className="space-y-4 bg-[#252525] border border-gray-800 rounded-lg p-4">
+            {questions.map((q: any, idx: number) => (
+              <div key={q.id} className="space-y-2">
+                <label className="text-sm font-medium text-gray-200">
+                  {idx + 1}. {q.question}
+                </label>
+                {q.context && <p className="text-xs text-gray-400">{q.context}</p>}
+                <Input
+                  value={answers[q.id] || ''}
+                  onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                  placeholder="Your answer..."
+                  disabled={submitting}
+                  className="bg-[#1c1c1c] border-gray-700 text-gray-100 placeholder:text-gray-500"
+                />
+              </div>
+            ))}
+            <Button
+              onClick={onSubmitAnswers}
+              disabled={submitting}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Submit Answers
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === 'plan') {
+    const plan = message.metadata?.plan;
+    if (!plan) return null;
+
+    return (
+      <div className="flex gap-4 items-start">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+          <Bot className="h-4 w-4 text-purple-400" />
+        </div>
+        <div className="flex-1 space-y-3">
+          <div className="text-sm text-gray-400">Planning Agent</div>
+          <div className="text-gray-100">I've created an execution plan:</div>
+          <div className="space-y-4 bg-[#252525] border border-gray-800 rounded-lg p-4">
+            {plan.summary && (
+              <div className="text-sm text-gray-300 pb-3 border-b border-gray-800">
+                {plan.summary}
+              </div>
+            )}
+            {plan.tasks && plan.tasks.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm font-semibold text-gray-200">Tasks:</div>
+                {plan.tasks.map((task: any, idx: number) => (
+                  <div key={task.id} className="bg-[#1c1c1c] border border-gray-700 rounded p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
                       <div className="flex-1">
-                        <h4 className="font-medium">{agent.name}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          {agent.status === 'RUNNING' && (
-                            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                          )}
-                          {agent.status === 'COMPLETED' && (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          )}
-                          {agent.status === 'FAILED' && <XCircle className="h-4 w-4 text-red-500" />}
-                          <span className="text-sm text-muted-foreground">{agent.status}</span>
-                        </div>
-                        {agent.pullRequestUrl && (
-                          <a
-                            href={agent.pullRequestUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-primary hover:underline mt-2 inline-block"
+                        <div className="text-sm text-gray-200">{task.description}</div>
+                        {task.reasoning && (
+                          <div className="text-xs text-gray-400 mt-1">{task.reasoning}</div>
+                        )}
+                        {task.estimatedComplexity && (
+                          <Badge
+                            className={`mt-2 text-xs ${
+                              task.estimatedComplexity === 'high'
+                                ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                : task.estimatedComplexity === 'medium'
+                                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                                : 'bg-green-500/10 text-green-400 border-green-500/20'
+                            }`}
                           >
-                            View Pull Request →
-                          </a>
+                            {task.estimatedComplexity}
+                          </Badge>
                         )}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+            {plan.requiresSubAgents && plan.subAgents && plan.subAgents.length > 0 && (
+              <div className="space-y-2 pt-3 border-t border-gray-800">
+                <div className="text-sm font-semibold text-gray-200">
+                  Sub-Agents ({plan.subAgents.length}):
+                </div>
+                {plan.subAgents.map((agent: any) => (
+                  <div
+                    key={agent.id}
+                    className="bg-[#1c1c1c] border border-gray-700 rounded p-3 space-y-1"
+                  >
+                    <div className="text-sm font-medium text-gray-200">{agent.name}</div>
+                    <div className="text-xs text-gray-400">{agent.description}</div>
+                    <div className="text-xs text-gray-500">Tasks: {agent.tasks?.length || 0}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button
+              onClick={onApprovePlan}
+              disabled={submitting}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Approve & Start Execution
+            </Button>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (message.type === 'agent_update') {
+    const agent = message.metadata?.agent;
+    if (!agent) return null;
+
+    const statusIcon =
+      agent.status === 'COMPLETED' ? (
+        <CheckCircle2 className="h-4 w-4 text-green-400" />
+      ) : agent.status === 'FAILED' ? (
+        <XCircle className="h-4 w-4 text-red-400" />
+      ) : (
+        <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
+      );
+
+    return (
+      <div className="flex gap-4 items-start">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+          <Clock className="h-4 w-4 text-gray-400" />
+        </div>
+        <div className="flex-1">
+          <div className="bg-[#252525] border border-gray-800 rounded-lg p-3 flex items-center gap-3">
+            {statusIcon}
+            <div className="flex-1">
+              <div className="text-sm text-gray-200">{agent.name}</div>
+              <div className="text-xs text-gray-400">{agent.status}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }

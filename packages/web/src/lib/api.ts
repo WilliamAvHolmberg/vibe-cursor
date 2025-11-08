@@ -40,6 +40,7 @@ export const api = {
       apiClient.post('/orchestration/create', data),
     list: () => apiClient.get('/orchestration/list'),
     get: (id: string) => apiClient.get(`/orchestration/${id}`),
+    getConversation: (id: string) => apiClient.get(`/orchestration/${id}/conversation`),
     answer: (id: string, answers: Record<string, string>) =>
       apiClient.post(`/orchestration/${id}/answer`, { answers }),
     approve: (id: string) => apiClient.post(`/orchestration/${id}/approve`),
