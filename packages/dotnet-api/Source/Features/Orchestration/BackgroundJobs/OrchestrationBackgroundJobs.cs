@@ -129,7 +129,21 @@ public class OrchestrationBackgroundJobs
         var name = spec.GetProperty("name").GetString() ?? "Sub Agent";
         var prompt = spec.GetProperty("prompt").GetString() ?? "";
         var branchName = spec.TryGetProperty("branchName", out var branch) ? branch.GetString() : null;
-        var agentId = spec.TryGetProperty("id", out var id) ? id.GetString() : Guid.NewGuid().ToString();
+        var planAgentId = spec.TryGetProperty("id", out var id) ? id.GetString() : null;
+        
+        if (string.IsNullOrEmpty(planAgentId))
+        {
+            planAgentId = Guid.NewGuid().ToString();
+        }
+        
+        var existingAgent = await _context.Agents
+            .FirstOrDefaultAsync(a => a.OrchestrationId == orchestrationId && a.Id == planAgentId);
+        
+        if (existingAgent != null)
+        {
+            _logger.LogWarning("Agent {AgentId} already exists for orchestration {OrchestrationId}, skipping creation", planAgentId, orchestrationId);
+            return;
+        }
         
         var dependsOn = new List<string>();
         if (spec.TryGetProperty("dependsOn", out var dependsOnProp) && dependsOnProp.ValueKind == JsonValueKind.Array)
@@ -139,7 +153,7 @@ public class OrchestrationBackgroundJobs
 
         var agent = new AgentModel
         {
-            Id = agentId,
+            Id = planAgentId,
             OrchestrationId = orchestrationId,
             Name = name,
             Prompt = prompt,
@@ -154,7 +168,7 @@ public class OrchestrationBackgroundJobs
 
         await _orchestrationService.CreateEventAsync(orchestrationId, "agent_created", new
         {
-            agentId,
+            agentId = planAgentId,
             name,
             dependsOn
         });
@@ -162,7 +176,7 @@ public class OrchestrationBackgroundJobs
         await _orchestrationService.BroadcastToOrchestrationAsync(orchestrationId, new
         {
             type = "agent_created",
-            agent = new { id = agentId, name, status = "PENDING", dependsOn }
+            agent = new { id = planAgentId, name, status = "PENDING", dependsOn }
         });
     }
 

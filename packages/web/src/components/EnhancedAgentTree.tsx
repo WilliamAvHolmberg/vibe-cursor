@@ -176,18 +176,13 @@ export function EnhancedAgentTree({ agents, onStartAgent, previewMode = false, o
                       e.stopPropagation();
                       setShowModelDropdown(!showModelDropdown);
                     }}
-                    disabled={!isStartable}
-                    className={`${
-                      isStartable 
-                        ? 'bg-[#1a1a1a] hover:bg-[#1f1f1f] border-[#2a2a2a] text-gray-300' 
-                        : 'bg-[#1a1a1a] border-[#2a2a2a] text-gray-600 cursor-not-allowed'
-                    } px-3 py-2 text-xs font-medium transition-all rounded-lg border flex items-center gap-2`}
+                    className="bg-[#1a1a1a] hover:bg-[#1f1f1f] border-[#2a2a2a] text-gray-300 px-3 py-2 text-xs font-medium transition-all rounded-lg border flex items-center gap-2"
                   >
                     <span>{selectedModel.name}</span>
                     <ChevronDown className="h-3 w-3" />
                   </button>
                   
-                  {showModelDropdown && isStartable && (
+                  {showModelDropdown && (
                     <>
                       {/* Backdrop to close dropdown */}
                       <div 
