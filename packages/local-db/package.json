@@ -1,0 +1,17 @@
+{
+  "name": "@orchestrator/local-db",
+  "version": "1.0.0",
+  "description": "Local PostgreSQL database for orchestrator development",
+  "scripts": {
+    "start": "docker compose up -d && npm run wait-for-db",
+    "stop": "docker compose down",
+    "restart": "npm run stop && npm run start",
+    "destroy": "docker compose down -v",
+    "logs": "docker compose logs -f postgres",
+    "wait-for-db": "node wait-for-db.js"
+  },
+  "devDependencies": {
+    "pg": "^8.13.1"
+  }
+}
+

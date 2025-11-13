@@ -1,0 +1,52 @@
+
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5435;Database=orchestrator_dev;Username=postgres;Password=postgres"
+  },
+  "Jwt": {
+    "Key": "development-secret-key-32-characters-minimum-length",
+    "Issuer": "api-dev",
+    "Audience": "api-dev",
+    "ExpiryMinutes": 43200
+  },
+  "FileStorage": {
+    "Provider": "Local",
+    "LocalPath": "uploads",
+    "R2": {
+      "AccountId": "your-r2-account-id",
+      "AccessKey": "your-r2-access-key",  
+      "SecretKey": "your-r2-secret-key",
+      "BucketName": "your-r2-bucket-name",
+      "PublicUrl": ""
+    }
+  },
+  "Email": {
+    "Provider": "Console",
+    "Resend": {
+      "ApiToken": "your-resend-api-token",
+      "FromEmail": "dev@yourdomain.com"
+    }
+  },
+  "Sms": {
+    "Provider": "Console",
+    "Elks": {
+      "Username": "your-46elks-username",
+      "Password": "your-46elks-password",
+      "From": "123456" 
+    }
+  },
+  "AI": {
+    "Gemini": {
+      "ApiKey": "your-gemini-api-key-from-aistudio"
+    }
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Information",
+      "Microsoft.AspNetCore": "Information",
+      "Microsoft.EntityFrameworkCore": "Information",
+      "Hangfire": "Information"
+    }
+  }
+} 

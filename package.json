@@ -6,6 +6,10 @@
     "packages/*"
   ],
   "scripts": {
+    "db:start": "npm run start --workspace=@orchestrator/local-db",
+    "db:stop": "npm run stop --workspace=@orchestrator/local-db",
+    "db:logs": "npm run logs --workspace=@orchestrator/local-db",
+    "db:destroy": "npm run destroy --workspace=@orchestrator/local-db",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:web\"",
     "dev:server": "npm run dev --workspace=@orchestrator/server",
     "dev:web": "npm run dev --workspace=@orchestrator/web",

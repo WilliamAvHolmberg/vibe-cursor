@@ -45,7 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (cursorApiKey: string, email?: string) => {
     const response = await api.auth.login(cursorApiKey, email);
     localStorage.setItem('auth_token', response.data.token);
-    setUser(response.data.user);
+    localStorage.setItem('user_id', response.data.userId);
+    setUser({
+      id: response.data.userId,
+      email: response.data.email
+    });
   };
 
   const logout = async () => {
@@ -55,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout failed:', error);
     }
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_id');
     setUser(null);
   };
 

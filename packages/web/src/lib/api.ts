@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export const apiClient = axios.create({
   baseURL: `${API_URL}/api`,
@@ -31,7 +31,7 @@ apiClient.interceptors.response.use(
 export const api = {
   auth: {
     login: (cursorApiKey: string, email?: string) =>
-      apiClient.post('/auth/login', { cursorApiKey, email }),
+      apiClient.post('/auth/cursor-login', { cursorApiKey, email }),
     logout: () => apiClient.post('/auth/logout'),
     me: () => apiClient.get('/auth/me'),
   },

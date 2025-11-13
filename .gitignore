@@ -25,3 +25,27 @@ packages/*/build
 *.swp
 *.swo
 *~
+
+# .NET / C#
+packages/dotnet-api/bin/
+packages/dotnet-api/obj/
+packages/dotnet-api/uploads/
+packages/dotnet-api/appsettings.Development.json
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.sln.docstates
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
