@@ -1,4 +1,4 @@
-import { CheckCircle2, Loader2, XCircle, Circle, Play, Clock, GitBranch, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Loader2, XCircle, Circle, Play, Clock, GitBranch, ChevronRight, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { useState } from 'react';
 
@@ -20,6 +20,21 @@ interface EnhancedAgentTreeProps {
 
 export function EnhancedAgentTree({ agents, onStartAgent, previewMode = false, onAgentClick }: EnhancedAgentTreeProps) {
   const [starting, setStarting] = useState<string | null>(null);
+  const [selectedModels, setSelectedModels] = useState<Record<string, string>>({});
+
+  const models = [
+    { id: 'sonnet-4.5', name: 'Sonnet 4.5', badge: 'Recommended' },
+    { id: 'gpt-5-codex', name: 'GPT-5 Codex', badge: 'Beta' },
+    { id: 'composer-1', name: 'Composer 1', badge: 'Experimental' },
+  ];
+
+  const getSelectedModel = (agentId: string) => {
+    return selectedModels[agentId] || models[0].id;
+  };
+
+  const setSelectedModel = (agentId: string, modelId: string) => {
+    setSelectedModels(prev => ({ ...prev, [agentId]: modelId }));
+  };
 
   const buildTree = () => {
     const agentMap = new Map(agents.map(a => [a.id, a]));
@@ -109,6 +124,9 @@ export function EnhancedAgentTree({ agents, onStartAgent, previewMode = false, o
     const isStarting = starting === agent.id;
     const statusInfo = getStatusText(agent);
     const path = parentPath ? `${parentPath} → ${agent.name}` : agent.name;
+    const [showModelDropdown, setShowModelDropdown] = useState(false);
+    const selectedModelId = getSelectedModel(agent.id);
+    const selectedModel = models.find(m => m.id === selectedModelId) || models[0];
 
     return (
       <div key={agent.id} className="relative">
@@ -150,28 +168,93 @@ export function EnhancedAgentTree({ agents, onStartAgent, previewMode = false, o
           {/* Actions */}
           <div className="flex items-center gap-2">
             {!previewMode && agent.status === 'PENDING' && (
-              <Button
-                size="sm"
-                disabled={!isStartable || isStarting}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStartAgent(agent.id);
-                }}
-                className={`${
-                  isStartable 
-                    ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20' 
-                    : 'bg-[#2a2a2a] text-gray-500 cursor-not-allowed'
-                } px-4 py-2 text-sm font-medium transition-all rounded-lg`}
-              >
-                {isStarting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <Play className="h-4 w-4 mr-1.5" />
-                    Start
-                  </>
-                )}
-              </Button>
+              <>
+                {/* Model Selector */}
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowModelDropdown(!showModelDropdown);
+                    }}
+                    disabled={!isStartable}
+                    className={`${
+                      isStartable 
+                        ? 'bg-[#1a1a1a] hover:bg-[#1f1f1f] border-[#2a2a2a] text-gray-300' 
+                        : 'bg-[#1a1a1a] border-[#2a2a2a] text-gray-600 cursor-not-allowed'
+                    } px-3 py-2 text-xs font-medium transition-all rounded-lg border flex items-center gap-2`}
+                  >
+                    <span>{selectedModel.name}</span>
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  
+                  {showModelDropdown && isStartable && (
+                    <>
+                      {/* Backdrop to close dropdown */}
+                      <div 
+                        className="fixed inset-0 z-10" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowModelDropdown(false);
+                        }}
+                      />
+                      
+                      {/* Dropdown menu */}
+                      <div className="absolute top-full mt-1 right-0 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[180px] overflow-hidden">
+                        {models.map((model) => (
+                          <button
+                            key={model.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedModel(agent.id, model.id);
+                              setShowModelDropdown(false);
+                            }}
+                            className={`w-full px-3 py-2.5 text-left text-sm transition-colors flex items-center justify-between ${
+                              selectedModelId === model.id
+                                ? 'bg-purple-500/10 text-purple-300'
+                                : 'text-gray-300 hover:bg-[#1f1f1f]'
+                            }`}
+                          >
+                            <span>{model.name}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              model.badge === 'Recommended' 
+                                ? 'bg-purple-500/20 text-purple-400'
+                                : model.badge === 'Beta'
+                                ? 'bg-blue-500/20 text-blue-400'
+                                : 'bg-gray-500/20 text-gray-400'
+                            }`}>
+                              {model.badge}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Start Button */}
+                <Button
+                  size="sm"
+                  disabled={!isStartable || isStarting}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartAgent(agent.id);
+                  }}
+                  className={`${
+                    isStartable 
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20' 
+                      : 'bg-[#2a2a2a] text-gray-500 cursor-not-allowed'
+                  } px-4 py-2 text-sm font-medium transition-all rounded-lg`}
+                >
+                  {isStarting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-1.5" />
+                      Start
+                    </>
+                  )}
+                </Button>
+              </>
             )}
             {onAgentClick && (
               <ChevronRight className="h-5 w-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
