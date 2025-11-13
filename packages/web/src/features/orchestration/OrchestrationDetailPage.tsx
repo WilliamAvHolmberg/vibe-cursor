@@ -263,39 +263,39 @@ export function OrchestrationDetailPage() {
       PLANNING: {
         label: 'Planning',
         icon: Loader2,
-        className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+        className: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
         animate: true,
       },
       AWAITING_FOLLOWUP: {
         label: 'Awaiting Response',
         icon: AlertCircle,
-        className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+        className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
       },
       AWAITING_APPROVAL: {
         label: 'Awaiting Approval',
         icon: AlertCircle,
-        className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+        className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
       },
       EXECUTING: {
         label: 'Executing',
         icon: Loader2,
-        className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+        className: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
         animate: true,
       },
       COMPLETED: {
         label: 'Completed',
         icon: CheckCircle2,
-        className: 'bg-green-500/10 text-green-400 border-green-500/20',
+        className: 'bg-green-500/10 text-green-400 border-green-500/30',
       },
       FAILED: {
         label: 'Failed',
         icon: XCircle,
-        className: 'bg-red-500/10 text-red-400 border-red-500/20',
+        className: 'bg-red-500/10 text-red-400 border-red-500/30',
       },
       CANCELLED: {
         label: 'Cancelled',
         icon: XCircle,
-        className: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+        className: 'bg-gray-500/10 text-gray-400 border-gray-500/30',
       },
     };
 
@@ -303,8 +303,8 @@ export function OrchestrationDetailPage() {
     const Icon = config.icon;
 
     return (
-      <Badge className={`${config.className} border`}>
-        <Icon className={`h-3 w-3 mr-1 ${config.animate ? 'animate-spin' : ''}`} />
+      <Badge className={`${config.className} border px-2.5 py-1`}>
+        <Icon className={`h-3 w-3 mr-1.5 ${config.animate ? 'animate-spin' : ''}`} />
         {config.label}
       </Badge>
     );
@@ -312,8 +312,8 @@ export function OrchestrationDetailPage() {
 
   if (!orchestration) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#1c1c1c]">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen flex items-center justify-center bg-[#0d0d0d]">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
       </div>
     );
   }
@@ -336,22 +336,27 @@ export function OrchestrationDetailPage() {
   const treeAgents = orchestration.status === 'AWAITING_APPROVAL' ? planAgents : (orchestration.agents || []);
 
   return (
-    <div className="min-h-screen bg-[#1c1c1c] flex flex-col">
-      <div className="border-b border-gray-800 bg-[#252525]">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-[#0d0d0d] flex flex-col">
+      {/* Header */}
+      <div className="border-b border-[#2a2a2a] bg-[#0d0d0d]">
+        <div className="max-w-full mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate('/')}
-              className="hover:bg-gray-700"
+              className="hover:bg-[#1f1f1f] text-gray-400 hover:text-gray-200"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-3">
-              <Sparkles className="h-5 w-5 text-purple-400" />
-              <span className="font-semibold text-gray-100">Orchestrator Agent</span>
-              {getStatusBadge()}
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+                <Sparkles className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-semibold text-gray-100 text-lg">Orchestrator</span>
+                {getStatusBadge()}
+              </div>
             </div>
           </div>
         </div>
@@ -359,9 +364,9 @@ export function OrchestrationDetailPage() {
 
       <div className="flex-1 overflow-hidden flex">
         {/* Chat on Left - 30% */}
-        <div className={`${showTree ? 'w-[30%]' : 'w-full'} flex-shrink-0 flex flex-col h-full overflow-hidden border-r border-gray-800`}>
-          <div className="flex-1 overflow-y-auto bg-[#1c1c1c]">
-            <div className="px-6 py-8 space-y-6">
+        <div className={`${showTree ? 'w-[30%]' : 'w-full'} flex-shrink-0 flex flex-col h-full overflow-hidden border-r border-[#2a2a2a]`}>
+          <div className="flex-1 overflow-y-auto bg-[#0d0d0d]">
+            <div className="px-5 py-6 space-y-5">
               {messages.map((message) => (
                 <MessageBubble
                   key={message.id}
@@ -379,10 +384,13 @@ export function OrchestrationDetailPage() {
         
         {/* Tree on Right - 70% */}
         {showTree && (
-          <div className="flex-1 h-full bg-[#252525] flex flex-col">
-            <div className="px-8 py-6 border-b border-gray-800 flex-shrink-0">
-              <h3 className="text-xl font-semibold text-gray-100 mb-2">Execution Flow</h3>
-              <p className="text-sm text-gray-500">
+          <div className="flex-1 h-full bg-[#161616] flex flex-col">
+            <div className="px-8 py-6 border-b border-[#2a2a2a] flex-shrink-0">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-1 h-8 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" />
+                <h3 className="text-xl font-semibold text-gray-100">Execution Flow</h3>
+              </div>
+              <p className="text-sm text-gray-500 ml-7">
                 {orchestration.status === 'AWAITING_APPROVAL' 
                   ? 'Preview the execution flow. Approve to create agents.'
                   : 'Click agents to view details and start when dependencies are complete.'}
@@ -431,13 +439,13 @@ function MessageBubble({
 
   if (message.type === 'user_message') {
     return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-          <User className="h-4 w-4 text-blue-400" />
+      <div className="flex gap-3 items-start">
+        <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+          <User className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1 space-y-1">
-          <div className="text-sm text-gray-400">You</div>
-          <div className="text-gray-100 whitespace-pre-wrap">{message.text}</div>
+          <div className="text-xs text-gray-500 font-medium">You</div>
+          <div className="text-sm text-gray-200 leading-relaxed">{message.text}</div>
         </div>
       </div>
     );
@@ -469,29 +477,29 @@ function MessageBubble({
     }
 
     return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-          <Bot className="h-4 w-4 text-purple-400" />
+      <div className="flex gap-3 items-start">
+        <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+          <Bot className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1 space-y-2">
-          <div className="text-sm text-gray-400">Planning Agent</div>
+          <div className="text-xs text-gray-500 font-medium">Planning Agent</div>
           
           {isJsonMessage ? (
             <div className="space-y-2">
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors"
+                className="flex items-center gap-2 text-gray-400 hover:text-gray-200 transition-colors text-sm"
               >
                 {isExpanded ? (
                   <ChevronDown className="h-4 w-4" />
                 ) : (
                   <ChevronRight className="h-4 w-4" />
                 )}
-                <span className="text-sm italic">{summary}</span>
+                <span className="italic">{summary}</span>
               </button>
               
               {isExpanded && (
-                <div className="bg-[#252525] border border-gray-800 rounded-lg p-4 overflow-x-auto">
+                <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4 overflow-x-auto">
                   <div className="prose prose-invert prose-sm max-w-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {message.text || ''}
@@ -501,7 +509,7 @@ function MessageBubble({
               )}
             </div>
           ) : (
-            <div className="prose prose-invert prose-sm max-w-none">
+            <div className="prose prose-invert prose-sm max-w-none text-gray-300">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {message.text || ''}
               </ReactMarkdown>
@@ -514,9 +522,9 @@ function MessageBubble({
 
   if (message.type === 'system') {
     return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-          <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+      <div className="flex gap-3 items-start">
+        <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center">
+          <Loader2 className="h-4 w-4 text-gray-500 animate-spin" />
         </div>
         <div className="flex-1 space-y-1">
           <div className="text-sm text-gray-500 italic">{message.text}</div>
@@ -528,33 +536,33 @@ function MessageBubble({
   if (message.type === 'questions') {
     const questions = message.metadata?.questions || [];
     return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-          <Bot className="h-4 w-4 text-purple-400" />
+      <div className="flex gap-3 items-start">
+        <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+          <Bot className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1 space-y-3">
-          <div className="text-sm text-gray-400">Planning Agent</div>
-          <div className="text-gray-100">I need some clarification to create an accurate plan:</div>
-          <div className="space-y-4 bg-[#252525] border border-gray-800 rounded-lg p-4">
+          <div className="text-xs text-gray-500 font-medium">Planning Agent</div>
+          <div className="text-sm text-gray-200">I need some clarification to create an accurate plan:</div>
+          <div className="space-y-4 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
             {questions.map((q: any, idx: number) => (
               <div key={q.id} className="space-y-2">
-                <label className="text-sm font-medium text-gray-200">
+                <label className="text-sm font-medium text-gray-300">
                   {idx + 1}. {q.question}
                 </label>
-                {q.context && <p className="text-xs text-gray-400">{q.context}</p>}
+                {q.context && <p className="text-xs text-gray-500">{q.context}</p>}
                 <Input
                   value={answers[q.id] || ''}
                   onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
                   placeholder="Your answer..."
                   disabled={submitting}
-                  className="bg-[#1c1c1c] border-gray-700 text-gray-100 placeholder:text-gray-500"
+                  className="bg-[#0d0d0d] border-[#2a2a2a] text-gray-200 placeholder:text-gray-600 focus:border-purple-500"
                 />
               </div>
             ))}
             <Button
               onClick={onSubmitAnswers}
               disabled={submitting}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20"
             >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit Answers
@@ -573,36 +581,39 @@ function MessageBubble({
     const taskCount = plan.tasks ? plan.tasks.length : 0;
 
     return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-          <Bot className="h-4 w-4 text-purple-400" />
+      <div className="flex gap-3 items-start">
+        <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+          <Bot className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1 space-y-3">
-          <div className="text-sm text-gray-400">Planning Agent</div>
-          <div className="text-gray-100">I've created an execution plan</div>
-          <div className="space-y-4 bg-[#252525] border border-gray-800 rounded-lg p-4">
+          <div className="text-xs text-gray-500 font-medium">Planning Agent</div>
+          <div className="text-sm text-gray-200">I've created an execution plan</div>
+          <div className="space-y-4 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
             {plan.summary && (
-              <div className="text-sm text-gray-300">
+              <div className="text-sm text-gray-300 leading-relaxed">
                 {plan.summary}
               </div>
             )}
-            <div className="flex gap-4 text-sm text-gray-400">
-              <div>
-                <span className="font-semibold text-gray-300">{agentCount}</span> agent{agentCount !== 1 ? 's' : ''}
+            <div className="flex gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                <span className="text-gray-400">{agentCount} agent{agentCount !== 1 ? 's' : ''}</span>
               </div>
               {taskCount > 0 && (
-                <div>
-                  <span className="font-semibold text-gray-300">{taskCount}</span> task{taskCount !== 1 ? 's' : ''}
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  <span className="text-gray-400">{taskCount} task{taskCount !== 1 ? 's' : ''}</span>
                 </div>
               )}
             </div>
-            <div className="text-xs text-blue-400">
-              👉 View the execution flow on the right to see all agents and their relationships
+            <div className="flex items-center gap-2 text-xs text-purple-400 bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
+              <ChevronRight className="h-4 w-4" />
+              <span>View the execution flow on the right to see all agents and their relationships</span>
             </div>
             <Button
               onClick={onApprovePlan}
               disabled={submitting}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20"
             >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Approve Plan (Manual Start)

@@ -64,34 +64,34 @@ export function EnhancedAgentTree({ agents, onStartAgent, previewMode = false, o
 
   const getStatusIcon = (agent: Agent) => {
     if (agent.status === 'COMPLETED') {
-      return <CheckCircle2 className="h-5 w-5 text-green-400" />;
+      return <CheckCircle2 className="h-5 w-5 text-emerald-400" />;
     } else if (agent.status === 'FAILED') {
-      return <XCircle className="h-5 w-5 text-red-400" />;
+      return <XCircle className="h-5 w-5 text-rose-400" />;
     } else if (agent.status === 'RUNNING' || agent.status === 'CREATING') {
-      return <Loader2 className="h-5 w-5 text-blue-400 animate-spin" />;
+      return <Loader2 className="h-5 w-5 text-purple-400 animate-spin" />;
     } else if (agent.status === 'PENDING') {
-      return <Circle className="h-5 w-5 text-gray-500" />;
+      return <Circle className="h-5 w-5 text-gray-600" />;
     } else {
-      return <Circle className="h-5 w-5 text-gray-500" />;
+      return <Circle className="h-5 w-5 text-gray-600" />;
     }
   };
 
   const getStatusColor = (agent: Agent) => {
-    if (agent.status === 'COMPLETED') return 'border-green-500/40 bg-green-500/10 hover:bg-green-500/15';
-    if (agent.status === 'FAILED') return 'border-red-500/40 bg-red-500/10 hover:bg-red-500/15';
-    if (agent.status === 'RUNNING' || agent.status === 'CREATING') return 'border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/15';
-    if (agent.status === 'PENDING') return 'border-gray-600 bg-gray-800/40 hover:bg-gray-800/60';
-    return 'border-gray-600 bg-gray-800/40 hover:bg-gray-800/60';
+    if (agent.status === 'COMPLETED') return 'border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10';
+    if (agent.status === 'FAILED') return 'border-rose-500/40 bg-rose-500/5 hover:bg-rose-500/10';
+    if (agent.status === 'RUNNING' || agent.status === 'CREATING') return 'border-purple-500/40 bg-purple-500/5 hover:bg-purple-500/10';
+    if (agent.status === 'PENDING') return 'border-[#2a2a2a] bg-[#1a1a1a] hover:bg-[#1f1f1f]';
+    return 'border-[#2a2a2a] bg-[#1a1a1a] hover:bg-[#1f1f1f]';
   };
 
   const getStatusText = (agent: Agent) => {
     const statusMap: Record<string, { text: string; color: string }> = {
-      PENDING: { text: 'Waiting to start', color: 'text-gray-400' },
-      CREATING: { text: 'Creating agent...', color: 'text-blue-400' },
-      RUNNING: { text: 'Running', color: 'text-blue-400' },
-      COMPLETED: { text: 'Completed', color: 'text-green-400' },
-      FAILED: { text: 'Failed', color: 'text-red-400' },
-      CANCELLED: { text: 'Cancelled', color: 'text-gray-400' },
+      PENDING: { text: 'Waiting to start', color: 'text-gray-500' },
+      CREATING: { text: 'Creating agent...', color: 'text-purple-400' },
+      RUNNING: { text: 'Running', color: 'text-purple-400' },
+      COMPLETED: { text: 'Completed', color: 'text-emerald-400' },
+      FAILED: { text: 'Failed', color: 'text-rose-400' },
+      CANCELLED: { text: 'Cancelled', color: 'text-gray-500' },
     };
     return statusMap[agent.status] || statusMap.PENDING;
   };
@@ -137,10 +137,10 @@ export function EnhancedAgentTree({ agents, onStartAgent, previewMode = false, o
               {statusInfo.text}
               {agent.dependsOnAgentIds.length > 0 && (
                 <>
-                  <span className="text-gray-600">•</span>
-                  <span className="text-gray-500 text-xs flex items-center gap-1">
+                  <span className="text-gray-700">•</span>
+                  <span className="text-gray-600 text-xs flex items-center gap-1">
                     <GitBranch className="h-3 w-3" />
-                    {agent.dependsOnAgentIds.length} dependencies
+                    {agent.dependsOnAgentIds.length} {agent.dependsOnAgentIds.length === 1 ? 'dependency' : 'dependencies'}
                   </span>
                 </>
               )}
@@ -159,9 +159,9 @@ export function EnhancedAgentTree({ agents, onStartAgent, previewMode = false, o
                 }}
                 className={`${
                   isStartable 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                } px-4 py-2 text-sm font-medium transition-colors`}
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20' 
+                    : 'bg-[#2a2a2a] text-gray-500 cursor-not-allowed'
+                } px-4 py-2 text-sm font-medium transition-all rounded-lg`}
               >
                 {isStarting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -174,7 +174,7 @@ export function EnhancedAgentTree({ agents, onStartAgent, previewMode = false, o
               </Button>
             )}
             {onAgentClick && (
-              <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-300 transition-colors" />
+              <ChevronRight className="h-5 w-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
             )}
           </div>
         </div>
@@ -183,12 +183,12 @@ export function EnhancedAgentTree({ agents, onStartAgent, previewMode = false, o
         {children.length > 0 && (
           <div className="relative ml-8 mt-4 space-y-4">
             {/* Vertical line connector */}
-            <div className="absolute left-0 top-0 bottom-4 w-px bg-gradient-to-b from-gray-600 to-transparent" />
+            <div className="absolute left-0 top-0 bottom-4 w-px bg-gradient-to-b from-[#3a3a3a] to-transparent" />
             
             {children.map((child, idx) => (
               <div key={child.id} className="relative pl-8">
                 {/* Horizontal line connector */}
-                <div className="absolute left-0 top-1/2 w-8 h-px bg-gray-600" />
+                <div className="absolute left-0 top-1/2 w-8 h-px bg-[#3a3a3a]" />
                 
                 {renderAgent(child, level + 1, idx === children.length - 1, path)}
               </div>
@@ -202,10 +202,10 @@ export function EnhancedAgentTree({ agents, onStartAgent, previewMode = false, o
   if (agents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mb-4">
-          <GitBranch className="h-8 w-8 text-gray-500" />
+        <div className="w-16 h-16 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center mb-4">
+          <GitBranch className="h-8 w-8 text-gray-600" />
         </div>
-        <p className="text-gray-400 text-sm">No agents in this orchestration yet</p>
+        <p className="text-gray-500 text-sm">No agents in this orchestration yet</p>
       </div>
     );
   }
