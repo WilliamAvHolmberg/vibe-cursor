@@ -1,3 +1,4 @@
+﻿using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -5,17 +6,16 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddAgentDependencies : Migration
+    public partial class AddAgentDependency : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
+            migrationBuilder.AddColumn<List<string>>(
                 name: "DependsOnAgentIds",
                 table: "Agents",
-                type: "text",
-                nullable: false,
-                defaultValue: "[]");
+                type: "text[]",
+                nullable: false);
         }
 
         /// <inheritdoc />
