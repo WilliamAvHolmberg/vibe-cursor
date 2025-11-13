@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { OrchestrationTree } from '@/components/OrchestrationTree';
 import {
   ArrowLeft,
   Loader2,
@@ -18,9 +17,6 @@ import {
   Sparkles,
   User,
   Bot,
-  Clock,
-  ChevronDown,
-  ChevronRight,
 } from 'lucide-react';
 
 interface ConversationMessage {
@@ -37,7 +33,6 @@ export function OrchestrationDetailPage() {
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: orchestration, refetch } = useQuery({
     queryKey: ['orchestration', id],
@@ -67,9 +62,6 @@ export function OrchestrationDetailPage() {
     }
   }, [lastMessage, refetch]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversationData, orchestration]);
 
   const buildConversationMessages = (): ConversationMessage[] => {
     const messages: ConversationMessage[] = [];
@@ -310,9 +302,9 @@ export function OrchestrationDetailPage() {
   const messages = buildConversationMessages();
 
   return (
-    <div className="min-h-screen bg-[#1c1c1c] flex flex-col">
-      <div className="border-b border-gray-800 bg-[#252525]">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+    <div className="h-screen bg-[#1c1c1c] flex flex-col">
+      <div className="border-b border-gray-800 bg-[#252525] flex-shrink-0">
+        <div className="px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -331,20 +323,27 @@ export function OrchestrationDetailPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-          {messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              answers={answers}
-              setAnswers={setAnswers}
-              onSubmitAnswers={handleAnswerQuestions}
-              onApprovePlan={handleApprovePlan}
-              submitting={submitting}
-            />
-          ))}
-          <div ref={messagesEndRef} />
+      <div className="flex-1 flex overflow-hidden">
+        <div className="w-80 border-r border-gray-800 flex-shrink-0">
+          <OrchestrationTree orchestration={orchestration} />
+        </div>
+        
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="max-w-3xl mx-auto space-y-4">
+              {messages.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  answers={answers}
+                  setAnswers={setAnswers}
+                  onSubmitAnswers={handleAnswerQuestions}
+                  onApprovePlan={handleApprovePlan}
+                  submitting={submitting}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -368,100 +367,65 @@ function MessageBubble({
   onApprovePlan,
   submitting,
 }: MessageBubbleProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   if (message.type === 'user_message') {
+    const displayText = message.text && message.text.length > 80 
+      ? message.text.substring(0, 80) + '...' 
+      : message.text;
+    
     return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-          <User className="h-4 w-4 text-blue-400" />
+      <div className="flex gap-3 items-center py-2">
+        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+          <User className="h-3 w-3 text-blue-400" />
         </div>
-        <div className="flex-1 space-y-1">
-          <div className="text-sm text-gray-400">You</div>
-          <div className="text-gray-100 whitespace-pre-wrap">{message.text}</div>
-        </div>
+        <div className="text-sm text-gray-200">{displayText}</div>
       </div>
     );
   }
 
   if (message.type === 'assistant_message') {
-    const isJsonMessage = message.text?.trim().startsWith('{') || message.text?.trim().startsWith('```json');
+    let summary = 'Sent response';
     
-    let summary = message.text && message.text.length > 100 
-      ? message.text.substring(0, 100) + '...'
-      : message.text;
-    
-    if (isJsonMessage) {
-      try {
-        let jsonText = message.text?.trim() || '';
-        if (jsonText.startsWith('```json')) {
-          jsonText = jsonText.replace(/```json\n?/g, '').replace(/```$/g, '').trim();
+    if (message.text) {
+      const isJsonMessage = message.text.trim().startsWith('{') || message.text.trim().startsWith('```json');
+      
+      if (isJsonMessage) {
+        try {
+          let jsonText = message.text.trim();
+          if (jsonText.startsWith('```json')) {
+            jsonText = jsonText.replace(/```json\n?/g, '').replace(/```$/g, '').trim();
+          }
+          const parsed = JSON.parse(jsonText);
+          
+          if (parsed.type === 'questions') {
+            summary = 'Asked clarifying questions';
+          } else if (parsed.type === 'plan') {
+            summary = 'Created execution plan';
+          }
+        } catch (e) {
+          summary = 'Sent structured response';
         }
-        const parsed = JSON.parse(jsonText);
-        
-        if (parsed.type === 'questions') {
-          summary = 'Asked clarifying questions';
-        } else if (parsed.type === 'plan') {
-          summary = 'Created execution plan';
-        }
-      } catch (e) {
-        summary = 'Sent structured response';
+      } else {
+        summary = message.text.substring(0, 60) + (message.text.length > 60 ? '...' : '');
       }
     }
 
     return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-          <Bot className="h-4 w-4 text-purple-400" />
+      <div className="flex gap-3 items-center py-2">
+        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+          <Bot className="h-3 w-3 text-purple-400" />
         </div>
-        <div className="flex-1 space-y-2">
-          <div className="text-sm text-gray-400">Planning Agent</div>
-          
-          {isJsonMessage ? (
-            <div className="space-y-2">
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center gap-2 text-gray-300 hover:text-gray-100 transition-colors"
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-                <span className="text-sm italic">{summary}</span>
-              </button>
-              
-              {isExpanded && (
-                <div className="bg-[#252525] border border-gray-800 rounded-lg p-4 overflow-x-auto">
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {message.text || ''}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="prose prose-invert prose-sm max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {message.text || ''}
-              </ReactMarkdown>
-            </div>
-          )}
-        </div>
+        <div className="text-sm text-gray-300 italic">{summary}</div>
       </div>
     );
   }
 
   if (message.type === 'system') {
     return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-          <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+      <div className="flex gap-3 items-center py-2">
+        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center">
+          <Loader2 className="h-3 w-3 text-gray-400 animate-spin" />
         </div>
-        <div className="flex-1 space-y-1">
-          <div className="text-sm text-gray-500 italic">{message.text}</div>
-        </div>
+        <div className="text-sm text-gray-400 italic">{message.text}</div>
       </div>
     );
   }
@@ -511,77 +475,25 @@ function MessageBubble({
     if (!plan) return null;
 
     return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+      <div className="space-y-3 bg-[#252525] border border-gray-800 rounded-lg p-4">
+        <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-purple-400" />
-        </div>
-        <div className="flex-1 space-y-3">
-          <div className="text-sm text-gray-400">Planning Agent</div>
-          <div className="text-gray-100">I've created an execution plan:</div>
-          <div className="space-y-4 bg-[#252525] border border-gray-800 rounded-lg p-4">
-            {plan.summary && (
-              <div className="text-sm text-gray-300 pb-3 border-b border-gray-800">
-                {plan.summary}
-              </div>
-            )}
-            {plan.tasks && plan.tasks.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-sm font-semibold text-gray-200">Tasks:</div>
-                {plan.tasks.map((task: any, idx: number) => (
-                  <div key={task.id} className="bg-[#1c1c1c] border border-gray-700 rounded p-3 space-y-2">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
-                      <div className="flex-1">
-                        <div className="text-sm text-gray-200">{task.description}</div>
-                        {task.reasoning && (
-                          <div className="text-xs text-gray-400 mt-1">{task.reasoning}</div>
-                        )}
-                        {task.estimatedComplexity && (
-                          <Badge
-                            className={`mt-2 text-xs ${
-                              task.estimatedComplexity === 'high'
-                                ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                : task.estimatedComplexity === 'medium'
-                                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                                : 'bg-green-500/10 text-green-400 border-green-500/20'
-                            }`}
-                          >
-                            {task.estimatedComplexity}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {plan.requiresSubAgents && plan.subAgents && plan.subAgents.length > 0 && (
-              <div className="space-y-2 pt-3 border-t border-gray-800">
-                <div className="text-sm font-semibold text-gray-200">
-                  Sub-Agents ({plan.subAgents.length}):
-                </div>
-                {plan.subAgents.map((agent: any) => (
-                  <div
-                    key={agent.id}
-                    className="bg-[#1c1c1c] border border-gray-700 rounded p-3 space-y-1"
-                  >
-                    <div className="text-sm font-medium text-gray-200">{agent.name}</div>
-                    <div className="text-xs text-gray-400">{agent.description}</div>
-                    <div className="text-xs text-gray-500">Tasks: {agent.tasks?.length || 0}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <Button
-              onClick={onApprovePlan}
-              disabled={submitting}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-            >
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Approve & Start Execution
-            </Button>
+          <div className="text-sm font-medium text-gray-200">
+            Plan ready: {plan.tasks?.length || 0} task(s)
+            {plan.subAgents && plan.subAgents.length > 0 && `, ${plan.subAgents.length} agent(s)`}
           </div>
         </div>
+        {plan.summary && (
+          <div className="text-sm text-gray-300">{plan.summary}</div>
+        )}
+        <Button
+          onClick={onApprovePlan}
+          disabled={submitting}
+          className="w-full bg-green-600 hover:bg-green-700 text-white"
+        >
+          {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Approve & Start Execution
+        </Button>
       </div>
     );
   }
@@ -592,26 +504,21 @@ function MessageBubble({
 
     const statusIcon =
       agent.status === 'COMPLETED' ? (
-        <CheckCircle2 className="h-4 w-4 text-green-400" />
+        <CheckCircle2 className="h-3 w-3 text-green-400" />
       ) : agent.status === 'FAILED' ? (
-        <XCircle className="h-4 w-4 text-red-400" />
+        <XCircle className="h-3 w-3 text-red-400" />
       ) : (
-        <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
+        <Loader2 className="h-3 w-3 text-blue-400 animate-spin" />
       );
 
     return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-          <Clock className="h-4 w-4 text-gray-400" />
+      <div className="flex gap-3 items-center py-2">
+        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
+          <Bot className="h-3 w-3 text-green-400" />
         </div>
-        <div className="flex-1">
-          <div className="bg-[#252525] border border-gray-800 rounded-lg p-3 flex items-center gap-3">
-            {statusIcon}
-            <div className="flex-1">
-              <div className="text-sm text-gray-200">{agent.name}</div>
-              <div className="text-xs text-gray-400">{agent.status}</div>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          {statusIcon}
+          <div className="text-sm text-gray-300">{agent.name}</div>
         </div>
       </div>
     );
