@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { AgentDependencyTree } from '@/components/AgentDependencyTree';
+import { EnhancedAgentTree } from '@/components/EnhancedAgentTree';
 import { AgentDetailModal } from '@/components/AgentDetailModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -358,32 +358,10 @@ export function OrchestrationDetailPage() {
       </div>
 
       <div className="flex-1 overflow-hidden flex">
-        <div className={`h-full ${showTree ? 'w-[40%] flex-shrink-0' : 'w-full'} flex flex-col`}>
-          {showTree && (
-            <div className="h-full border-r border-gray-800 bg-[#252525] flex flex-col">
-              <div className="p-6 border-b border-gray-800 flex-shrink-0">
-                <h3 className="text-lg font-semibold text-gray-100 mb-2">Agent Dependencies</h3>
-                <p className="text-xs text-gray-500">
-                  {orchestration.status === 'AWAITING_APPROVAL' 
-                    ? 'Preview the dependency tree. Approve to create agents.'
-                    : 'Click agents to view details. Start when dependencies are complete.'}
-                </p>
-              </div>
-              <div className="flex-1 overflow-y-auto p-6">
-                <AgentDependencyTree 
-                  agents={treeAgents}
-                  onStartAgent={orchestration.status === 'AWAITING_APPROVAL' ? async () => {} : handleStartAgent}
-                  previewMode={orchestration.status === 'AWAITING_APPROVAL'}
-                  onAgentClick={setSelectedAgent}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-        
-        <div className={`${showTree ? 'flex-1' : 'w-full'} flex flex-col h-full overflow-hidden`}>
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+        {/* Chat on Left - 30% */}
+        <div className={`${showTree ? 'w-[30%]' : 'w-full'} flex-shrink-0 flex flex-col h-full overflow-hidden border-r border-gray-800`}>
+          <div className="flex-1 overflow-y-auto bg-[#1c1c1c]">
+            <div className="px-6 py-8 space-y-6">
               {messages.map((message) => (
                 <MessageBubble
                   key={message.id}
@@ -398,6 +376,28 @@ export function OrchestrationDetailPage() {
             </div>
           </div>
         </div>
+        
+        {/* Tree on Right - 70% */}
+        {showTree && (
+          <div className="flex-1 h-full bg-[#252525] flex flex-col">
+            <div className="px-8 py-6 border-b border-gray-800 flex-shrink-0">
+              <h3 className="text-xl font-semibold text-gray-100 mb-2">Execution Flow</h3>
+              <p className="text-sm text-gray-500">
+                {orchestration.status === 'AWAITING_APPROVAL' 
+                  ? 'Preview the execution flow. Approve to create agents.'
+                  : 'Click agents to view details and start when dependencies are complete.'}
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto px-8 py-6">
+              <EnhancedAgentTree 
+                agents={treeAgents}
+                onStartAgent={orchestration.status === 'AWAITING_APPROVAL' ? async () => {} : handleStartAgent}
+                previewMode={orchestration.status === 'AWAITING_APPROVAL'}
+                onAgentClick={setSelectedAgent}
+              />
+            </div>
+          </div>
+        )}
       </div>
       
       {selectedAgent && (
@@ -597,7 +597,7 @@ function MessageBubble({
               )}
             </div>
             <div className="text-xs text-blue-400">
-              👈 View the dependency tree on the left to see all agents and their relationships
+              👉 View the execution flow on the right to see all agents and their relationships
             </div>
             <Button
               onClick={onApprovePlan}
