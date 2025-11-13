@@ -14,9 +14,10 @@ interface AgentTreeProps {
   agents: Agent[];
   onStartAgent: (agentId: string) => Promise<void>;
   previewMode?: boolean;
+  onAgentClick?: (agent: Agent) => void;
 }
 
-export function AgentDependencyTree({ agents, onStartAgent, previewMode = false }: AgentTreeProps) {
+export function AgentDependencyTree({ agents, onStartAgent, previewMode = false, onAgentClick }: AgentTreeProps) {
   const [starting, setStarting] = useState<string | null>(null);
 
   const buildTree = () => {
@@ -89,7 +90,10 @@ export function AgentDependencyTree({ agents, onStartAgent, previewMode = false 
 
     return (
       <div key={agent.id} className="relative">
-        <div className={`flex items-center gap-3 p-3 rounded-lg border ${getStatusColor(agent)}`}>
+        <div 
+          className={`flex items-center gap-3 p-3 rounded-lg border ${getStatusColor(agent)} ${onAgentClick ? 'cursor-pointer hover:bg-gray-700/30 transition-colors' : ''}`}
+          onClick={() => onAgentClick?.(agent)}
+        >
           {getStatusIcon(agent)}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-gray-200 truncate">{agent.name}</div>
@@ -99,7 +103,10 @@ export function AgentDependencyTree({ agents, onStartAgent, previewMode = false 
             <Button
               size="sm"
               disabled={!isStartable || isStarting}
-              onClick={() => handleStartAgent(agent.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStartAgent(agent.id);
+              }}
               className={`${
                 isStartable 
                   ? 'bg-blue-600 hover:bg-blue-700' 

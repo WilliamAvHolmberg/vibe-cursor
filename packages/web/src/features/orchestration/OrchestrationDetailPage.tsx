@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { AgentDependencyTree } from '@/components/AgentDependencyTree';
+import { AgentDetailModal } from '@/components/AgentDetailModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -38,7 +39,7 @@ export function OrchestrationDetailPage() {
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
 
   const { data: orchestration, refetch } = useQuery({
     queryKey: ['orchestration', id],
@@ -67,10 +68,6 @@ export function OrchestrationDetailPage() {
       refetch();
     }
   }, [lastMessage, refetch]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversationData, orchestration]);
 
   const buildConversationMessages = (): ConversationMessage[] => {
     const messages: ConversationMessage[] = [];
@@ -156,20 +153,16 @@ export function OrchestrationDetailPage() {
     }
 
     if (orchestration.status === 'EXECUTING') {
+      const totalAgents = orchestration.agents?.length || 0;
+      const completedAgents = orchestration.agents?.filter((a: any) => a.status === 'COMPLETED').length || 0;
+      const runningAgents = orchestration.agents?.filter((a: any) => a.status === 'RUNNING' || a.status === 'CREATING').length || 0;
+      const pendingAgents = orchestration.agents?.filter((a: any) => a.status === 'PENDING').length || 0;
+
       messages.push({
         id: 'system-executing',
         type: 'system',
-        text: `Executing plan with ${orchestration.agents?.length || 0} agent(s)...`,
+        text: `Execution in progress: ${completedAgents}/${totalAgents} completed, ${runningAgents} running, ${pendingAgents} pending. Click agents in the tree to view details.`,
         timestamp: new Date(),
-      });
-
-      orchestration.agents?.forEach((agent: any, idx: number) => {
-        messages.push({
-          id: `agent-${idx}`,
-          type: 'agent_update',
-          timestamp: new Date(agent.createdAt),
-          metadata: { agent },
-        });
       });
     }
 
@@ -364,26 +357,31 @@ export function OrchestrationDetailPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        <div className={`h-full ${showTree ? 'grid grid-cols-[30%_70%]' : 'flex'}`}>
+      <div className="flex-1 overflow-hidden flex">
+        <div className={`h-full ${showTree ? 'w-[40%] flex-shrink-0' : 'w-full'} flex flex-col`}>
           {showTree && (
-            <div className="border-r border-gray-800 bg-[#252525] overflow-y-auto p-6">
-              <div className="mb-4">
+            <div className="h-full border-r border-gray-800 bg-[#252525] flex flex-col">
+              <div className="p-6 border-b border-gray-800 flex-shrink-0">
                 <h3 className="text-lg font-semibold text-gray-100 mb-2">Agent Dependencies</h3>
                 <p className="text-xs text-gray-500">
                   {orchestration.status === 'AWAITING_APPROVAL' 
                     ? 'Preview the dependency tree. Approve to create agents.'
-                    : 'Start agents manually when their dependencies are complete'}
+                    : 'Click agents to view details. Start when dependencies are complete.'}
                 </p>
               </div>
-              <AgentDependencyTree 
-                agents={treeAgents}
-                onStartAgent={orchestration.status === 'AWAITING_APPROVAL' ? async () => {} : handleStartAgent}
-                previewMode={orchestration.status === 'AWAITING_APPROVAL'}
-              />
+              <div className="flex-1 overflow-y-auto p-6">
+                <AgentDependencyTree 
+                  agents={treeAgents}
+                  onStartAgent={orchestration.status === 'AWAITING_APPROVAL' ? async () => {} : handleStartAgent}
+                  previewMode={orchestration.status === 'AWAITING_APPROVAL'}
+                  onAgentClick={setSelectedAgent}
+                />
+              </div>
             </div>
           )}
-          
+        </div>
+        
+        <div className={`${showTree ? 'flex-1' : 'w-full'} flex flex-col h-full overflow-hidden`}>
           <div className="flex-1 overflow-y-auto">
             <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
               {messages.map((message) => (
@@ -397,11 +395,17 @@ export function OrchestrationDetailPage() {
                   submitting={submitting}
                 />
               ))}
-              <div ref={messagesEndRef} />
             </div>
           </div>
         </div>
       </div>
+      
+      {selectedAgent && (
+        <AgentDetailModal 
+          agent={selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+        />
+      )}
     </div>
   );
 }
@@ -565,6 +569,9 @@ function MessageBubble({
     const plan = message.metadata?.plan;
     if (!plan) return null;
 
+    const agentCount = plan.requiresSubAgents && plan.subAgents ? plan.subAgents.length : 1;
+    const taskCount = plan.tasks ? plan.tasks.length : 0;
+
     return (
       <div className="flex gap-4 items-start">
         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
@@ -572,61 +579,26 @@ function MessageBubble({
         </div>
         <div className="flex-1 space-y-3">
           <div className="text-sm text-gray-400">Planning Agent</div>
-          <div className="text-gray-100">I've created an execution plan:</div>
+          <div className="text-gray-100">I've created an execution plan</div>
           <div className="space-y-4 bg-[#252525] border border-gray-800 rounded-lg p-4">
             {plan.summary && (
-              <div className="text-sm text-gray-300 pb-3 border-b border-gray-800">
+              <div className="text-sm text-gray-300">
                 {plan.summary}
               </div>
             )}
-            {plan.tasks && plan.tasks.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-sm font-semibold text-gray-200">Tasks:</div>
-                {plan.tasks.map((task: any, idx: number) => (
-                  <div key={task.id} className="bg-[#1c1c1c] border border-gray-700 rounded p-3 space-y-2">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
-                      <div className="flex-1">
-                        <div className="text-sm text-gray-200">{task.description}</div>
-                        {task.reasoning && (
-                          <div className="text-xs text-gray-400 mt-1">{task.reasoning}</div>
-                        )}
-                        {task.estimatedComplexity && (
-                          <Badge
-                            className={`mt-2 text-xs ${
-                              task.estimatedComplexity === 'high'
-                                ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                : task.estimatedComplexity === 'medium'
-                                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                                : 'bg-green-500/10 text-green-400 border-green-500/20'
-                            }`}
-                          >
-                            {task.estimatedComplexity}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            <div className="flex gap-4 text-sm text-gray-400">
+              <div>
+                <span className="font-semibold text-gray-300">{agentCount}</span> agent{agentCount !== 1 ? 's' : ''}
               </div>
-            )}
-            {plan.requiresSubAgents && plan.subAgents && plan.subAgents.length > 0 && (
-              <div className="space-y-2 pt-3 border-t border-gray-800">
-                <div className="text-sm font-semibold text-gray-200">
-                  Sub-Agents ({plan.subAgents.length}):
+              {taskCount > 0 && (
+                <div>
+                  <span className="font-semibold text-gray-300">{taskCount}</span> task{taskCount !== 1 ? 's' : ''}
                 </div>
-                {plan.subAgents.map((agent: any) => (
-                  <div
-                    key={agent.id}
-                    className="bg-[#1c1c1c] border border-gray-700 rounded p-3 space-y-1"
-                  >
-                    <div className="text-sm font-medium text-gray-200">{agent.name}</div>
-                    <div className="text-xs text-gray-400">{agent.description}</div>
-                    <div className="text-xs text-gray-500">Tasks: {agent.tasks?.length || 0}</div>
-                  </div>
-                ))}
-              </div>
-            )}
+              )}
+            </div>
+            <div className="text-xs text-blue-400">
+              👈 View the dependency tree on the left to see all agents and their relationships
+            </div>
             <Button
               onClick={onApprovePlan}
               disabled={submitting}
@@ -642,34 +614,7 @@ function MessageBubble({
   }
 
   if (message.type === 'agent_update') {
-    const agent = message.metadata?.agent;
-    if (!agent) return null;
-
-    const statusIcon =
-      agent.status === 'COMPLETED' ? (
-        <CheckCircle2 className="h-4 w-4 text-green-400" />
-      ) : agent.status === 'FAILED' ? (
-        <XCircle className="h-4 w-4 text-red-400" />
-      ) : (
-        <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
-      );
-
-    return (
-      <div className="flex gap-4 items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-          <Clock className="h-4 w-4 text-gray-400" />
-        </div>
-        <div className="flex-1">
-          <div className="bg-[#252525] border border-gray-800 rounded-lg p-3 flex items-center gap-3">
-            {statusIcon}
-            <div className="flex-1">
-              <div className="text-sm text-gray-200">{agent.name}</div>
-              <div className="text-xs text-gray-400">{agent.status}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return null;
