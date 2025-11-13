@@ -212,6 +212,28 @@ public class OrchestrationController : ControllerBase
 
         return Ok(new { success = true });
     }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        var userId = User.GetUserId();
+        var cursorApiKey = User.GetCursorApiKey();
+
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(cursorApiKey))
+        {
+            return Unauthorized(new { error = "Missing user credentials" });
+        }
+
+        var command = new DeleteOrchestrationCommand(id, userId, cursorApiKey);
+        var result = await _mediator.Send(command);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        return Ok(new { success = true });
+    }
 }
 
 public record CreateOrchestrationRequest(

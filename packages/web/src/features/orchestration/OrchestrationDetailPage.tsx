@@ -23,6 +23,8 @@ import {
   Clock,
   ChevronDown,
   ChevronRight,
+  Trash2,
+  StopCircle,
 } from 'lucide-react';
 
 interface ConversationMessage {
@@ -40,6 +42,7 @@ export function OrchestrationDetailPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: orchestration, refetch } = useQuery({
     queryKey: ['orchestration', id],
@@ -253,6 +256,46 @@ export function OrchestrationDetailPage() {
     }
   };
 
+  const handleCancelOrchestration = async () => {
+    if (!id) return;
+    
+    try {
+      await api.orchestration.cancel(id);
+      toast({
+        title: 'Orchestration Cancelled',
+        description: 'The orchestration has been cancelled',
+      });
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to cancel orchestration',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteOrchestration = async () => {
+    if (!id) return;
+    
+    try {
+      await api.orchestration.delete(id);
+      toast({
+        title: 'Orchestration Deleted',
+        description: 'The orchestration has been deleted',
+      });
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to delete orchestration',
+        variant: 'destructive',
+      });
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  };
+
   const getStatusBadge = () => {
     if (!orchestration) return null;
 
@@ -359,6 +402,30 @@ export function OrchestrationDetailPage() {
               </div>
             </div>
           </div>
+          
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {(orchestration.status === 'PLANNING' || orchestration.status === 'EXECUTING' || orchestration.status === 'AWAITING_APPROVAL') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCancelOrchestration}
+                className="text-gray-400 hover:text-gray-200 hover:bg-[#1f1f1f] gap-2"
+              >
+                <StopCircle className="h-4 w-4" />
+                Cancel
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -413,6 +480,48 @@ export function OrchestrationDetailPage() {
           agent={selectedAgent}
           onClose={() => setSelectedAgent(null)}
         />
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div 
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div 
+            className="bg-[#161616] border border-[#2a2a2a] rounded-xl max-w-md w-full p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="h-5 w-5 text-rose-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-100 mb-1">Delete Orchestration</h3>
+                <p className="text-sm text-gray-400">
+                  Are you sure you want to delete this orchestration? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="text-gray-400 hover:text-gray-200 hover:bg-[#1f1f1f]"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteOrchestration}
+                className="bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-500/20"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
