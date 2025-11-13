@@ -279,7 +279,7 @@ public class OrchestrationService
         await CreateEventAsync(orchestrationId, "plan_approved", new { });
 
         BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
-            x.ExecutePlanAsync(orchestrationId, cursorApiKey));
+            x.CreateAgentsFromPlanAsync(orchestrationId, cursorApiKey));
     }
 
     public async Task CancelOrchestrationAsync(string orchestrationId, string cursorApiKey)

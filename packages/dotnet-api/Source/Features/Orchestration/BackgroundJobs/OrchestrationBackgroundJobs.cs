@@ -90,7 +90,7 @@ public class OrchestrationBackgroundJobs
         }
     }
 
-    public async Task ExecutePlanAsync(string orchestrationId, string cursorApiKey)
+    public async Task CreateAgentsFromPlanAsync(string orchestrationId, string cursorApiKey)
     {
         var orchestration = await _context.Orchestrations.FindAsync(orchestrationId);
         if (orchestration == null || string.IsNullOrEmpty(orchestration.ApprovedPlan)) return;
@@ -114,6 +114,11 @@ public class OrchestrationBackgroundJobs
 
         Hangfire.BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
             x.MonitorExecutionAsync(orchestrationId, cursorApiKey));
+    }
+
+    public async Task ExecutePlanAsync(string orchestrationId, string cursorApiKey)
+    {
+        await CreateAgentsFromPlanAsync(orchestrationId, cursorApiKey);
     }
 
     private async Task CreateSubAgentAsync(string orchestrationId, string cursorApiKey, JsonElement spec)

@@ -13,9 +13,10 @@ interface Agent {
 interface AgentTreeProps {
   agents: Agent[];
   onStartAgent: (agentId: string) => Promise<void>;
+  previewMode?: boolean;
 }
 
-export function AgentDependencyTree({ agents, onStartAgent }: AgentTreeProps) {
+export function AgentDependencyTree({ agents, onStartAgent, previewMode = false }: AgentTreeProps) {
   const [starting, setStarting] = useState<string | null>(null);
 
   const buildTree = () => {
@@ -94,7 +95,7 @@ export function AgentDependencyTree({ agents, onStartAgent }: AgentTreeProps) {
             <div className="text-sm font-medium text-gray-200 truncate">{agent.name}</div>
             <div className="text-xs text-gray-500">{agent.status}</div>
           </div>
-          {agent.status === 'PENDING' && (
+          {!previewMode && agent.status === 'PENDING' && (
             <Button
               size="sm"
               disabled={!isStartable || isStarting}

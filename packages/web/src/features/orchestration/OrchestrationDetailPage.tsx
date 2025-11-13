@@ -327,7 +327,20 @@ export function OrchestrationDetailPage() {
 
   const messages = buildConversationMessages();
   const hasAgents = orchestration.agents && orchestration.agents.length > 0;
-  const showTree = orchestration.status === 'EXECUTING' || orchestration.status === 'COMPLETED' || orchestration.status === 'FAILED';
+  
+  const planAgents = orchestration.status === 'AWAITING_APPROVAL' && orchestration.planningOutput?.content?.subAgents 
+    ? orchestration.planningOutput.content.subAgents.map((agent: any) => ({
+        id: agent.id,
+        name: agent.name,
+        status: 'PENDING',
+        dependsOnAgentIds: agent.dependsOn || [],
+      }))
+    : [];
+  
+  const showTree = (orchestration.status === 'AWAITING_APPROVAL' && planAgents.length > 0) ||
+                   (orchestration.status === 'EXECUTING' || orchestration.status === 'COMPLETED' || orchestration.status === 'FAILED') && hasAgents;
+  
+  const treeAgents = orchestration.status === 'AWAITING_APPROVAL' ? planAgents : (orchestration.agents || []);
 
   return (
     <div className="min-h-screen bg-[#1c1c1c] flex flex-col">
@@ -352,18 +365,21 @@ export function OrchestrationDetailPage() {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <div className={`h-full ${showTree && hasAgents ? 'grid grid-cols-[30%_70%]' : 'flex'}`}>
-          {showTree && hasAgents && (
+        <div className={`h-full ${showTree ? 'grid grid-cols-[30%_70%]' : 'flex'}`}>
+          {showTree && (
             <div className="border-r border-gray-800 bg-[#252525] overflow-y-auto p-6">
               <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-100 mb-2">Agent Dependencies</h3>
                 <p className="text-xs text-gray-500">
-                  Start agents manually when their dependencies are complete
+                  {orchestration.status === 'AWAITING_APPROVAL' 
+                    ? 'Preview the dependency tree. Approve to create agents.'
+                    : 'Start agents manually when their dependencies are complete'}
                 </p>
               </div>
               <AgentDependencyTree 
-                agents={orchestration.agents}
-                onStartAgent={handleStartAgent}
+                agents={treeAgents}
+                onStartAgent={orchestration.status === 'AWAITING_APPROVAL' ? async () => {} : handleStartAgent}
+                previewMode={orchestration.status === 'AWAITING_APPROVAL'}
               />
             </div>
           )}
@@ -617,7 +633,7 @@ function MessageBubble({
               className="w-full bg-green-600 hover:bg-green-700 text-white"
             >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Approve & Start Execution
+              Approve Plan (Manual Start)
             </Button>
           </div>
         </div>
