@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
+import { AgentDependencyTree } from '@/components/AgentDependencyTree';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -242,6 +243,23 @@ export function OrchestrationDetailPage() {
     }
   };
 
+  const handleStartAgent = async (agentId: string) => {
+    try {
+      await api.orchestration.startAgent(agentId);
+      await refetch();
+      toast({
+        title: 'Agent Started',
+        description: 'The agent has been started successfully',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to start agent',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getStatusBadge = () => {
     if (!orchestration) return null;
 
@@ -308,11 +326,13 @@ export function OrchestrationDetailPage() {
   }
 
   const messages = buildConversationMessages();
+  const hasAgents = orchestration.agents && orchestration.agents.length > 0;
+  const showTree = orchestration.status === 'EXECUTING' || orchestration.status === 'COMPLETED' || orchestration.status === 'FAILED';
 
   return (
     <div className="min-h-screen bg-[#1c1c1c] flex flex-col">
       <div className="border-b border-gray-800 bg-[#252525]">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -331,20 +351,39 @@ export function OrchestrationDetailPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-          {messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              answers={answers}
-              setAnswers={setAnswers}
-              onSubmitAnswers={handleAnswerQuestions}
-              onApprovePlan={handleApprovePlan}
-              submitting={submitting}
-            />
-          ))}
-          <div ref={messagesEndRef} />
+      <div className="flex-1 overflow-hidden">
+        <div className={`h-full ${showTree && hasAgents ? 'grid grid-cols-[30%_70%]' : 'flex'}`}>
+          {showTree && hasAgents && (
+            <div className="border-r border-gray-800 bg-[#252525] overflow-y-auto p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-100 mb-2">Agent Dependencies</h3>
+                <p className="text-xs text-gray-500">
+                  Start agents manually when their dependencies are complete
+                </p>
+              </div>
+              <AgentDependencyTree 
+                agents={orchestration.agents}
+                onStartAgent={handleStartAgent}
+              />
+            </div>
+          )}
+          
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+              {messages.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  answers={answers}
+                  setAnswers={setAnswers}
+                  onSubmitAnswers={handleAnswerQuestions}
+                  onApprovePlan={handleApprovePlan}
+                  submitting={submitting}
+                />
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -49,43 +49,66 @@ If you have enough information, respond with:
   }
 }
 
-CRITICAL RULES FOR SUB-AGENTS:
+CRITICAL RULES FOR SUB-AGENTS & DEPENDENCIES:
 
-⚠️ SUB-AGENTS RUN IN PARALLEL - THEY CANNOT DEPEND ON EACH OTHER ⚠️
+⚠️ SUB-AGENTS CAN NOW HAVE DEPENDENCIES - BUT EXECUTE WHEN DEPENDENCIES ARE MET ⚠️
 
 1. **YOU are responsible for ALL analysis and research** - NOT the sub-agents
    - If you need to understand the codebase first, ask questions
    - Read and analyze all necessary files YOURSELF before creating the plan
    - Sub-agents should receive COMPLETE context and instructions
 
-2. **Sub-agents MUST be completely independent**:
-   - ❌ BAD: ""Agent 1: Analyze code → Agent 2: Implement based on Agent 1's analysis → Agent 3: Update UI""
-   - ✅ GOOD: ""Agent 1: Update authentication module → Agent 2: Update payment module → Agent 3: Update admin module""
-   - Each sub-agent works on a SEPARATE, INDEPENDENT part of the codebase
-   - They all execute simultaneously and cannot communicate with each other
+2. **Understanding Dependencies**:
+   - Sub-agents execute when all their dependencies are completed
+   - Use the ""dependsOn"" field to specify which agents must complete first
+   - Multiple agents with no dependencies can run in parallel
+   - Example dependency chains:
+     * Agent 1: Create shared utilities (no dependencies)
+     * Agent 2: Update user module (dependsOn: [""agent1""])
+     * Agent 3: Update admin module (dependsOn: [""agent1""])
+     * Agent 4: Write tests (dependsOn: [""agent2"", ""agent3""])
 
-3. **When to use sub-agents**:
-   - Use for tasks that can be split into PARALLEL, INDEPENDENT work streams
-   - Examples:
-     * Multiple independent features
-     * Different modules/services that don't interact
-     * Updating multiple separate file groups
-   - Do NOT use for sequential workflows
+3. **When to use dependencies**:
+   - Foundation/shared code that multiple features need
+   - API changes that frontend features depend on
+   - Database migrations that must happen before data operations
+   - Helper functions/utilities needed by multiple modules
+   
+4. **Examples**:
+   ✅ GOOD - With dependencies:
+   - Agent 1: ""Create shared validation functions"" (dependsOn: [])
+   - Agent 2: ""Update user registration"" (dependsOn: [""agent1""])
+   - Agent 3: ""Update profile page"" (dependsOn: [""agent1""])
+   
+   ✅ GOOD - Parallel (no dependencies):
+   - Agent 1: ""Update authentication module"" (dependsOn: [])
+   - Agent 2: ""Update payment module"" (dependsOn: [])
+   - Agent 3: ""Update admin module"" (dependsOn: [])
 
-4. **When NOT to use sub-agents**:
-   - Sequential tasks (step 1 → step 2 → step 3)
-   - Tasks requiring analysis/exploration first
-   - Small tasks (< 10 files)
-   - Tasks where one change affects another
+5. **When NOT to use sub-agents**:
+   - Very small tasks (< 5 files)
+   - Tasks requiring extensive exploration/analysis
+   - Tasks where the scope is unclear
 
-5. **For SIMPLE tasks** (< 5 files, single area): 
+6. **For SIMPLE tasks** (< 5 files, single area): 
    - Set requiresSubAgents to false
    - Provide a clear, detailed task list for a single agent
 
-6. **Task complexity**:
+7. **Task complexity**:
    - low: Simple changes, single file, < 30 min
    - medium: Multiple files, requires thinking, < 2 hours
    - high: Complex logic, many dependencies, > 2 hours
+
+8. **Sub-agent JSON format with dependencies**:
+   {
+     ""id"": ""agent1"",
+     ""name"": ""Create Shared Utils"",
+     ""description"": ""Create shared utility functions"",
+     ""prompt"": ""Detailed prompt..."",
+     ""tasks"": [""task1"", ""task2""],
+     ""branchName"": ""feature/shared-utils"",
+     ""dependsOn"": []
+   }
 
 Remember: Output ONLY the JSON object, nothing else.";
 

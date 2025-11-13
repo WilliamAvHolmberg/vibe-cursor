@@ -45,5 +45,6 @@ export const api = {
       apiClient.post(`/orchestration/${id}/answer`, { answers }),
     approve: (id: string) => apiClient.post(`/orchestration/${id}/approve`),
     cancel: (id: string) => apiClient.post(`/orchestration/${id}/cancel`),
+    startAgent: (agentId: string) => apiClient.post(`/orchestration/agent/${agentId}/start`),
   },
 };

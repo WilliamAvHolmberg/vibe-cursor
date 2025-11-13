@@ -190,6 +190,28 @@ public class OrchestrationController : ControllerBase
 
         return Ok(conversationResult.Value);
     }
+
+    [HttpPost("agent/{agentId}/start")]
+    public async Task<IActionResult> StartAgent(string agentId)
+    {
+        var userId = User.GetUserId();
+        var cursorApiKey = User.GetCursorApiKey();
+
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(cursorApiKey))
+        {
+            return Unauthorized(new { error = "Missing user credentials" });
+        }
+
+        var command = new StartAgentCommand(agentId, userId, cursorApiKey);
+        var result = await _mediator.Send(command);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        return Ok(new { success = true });
+    }
 }
 
 public record CreateOrchestrationRequest(
