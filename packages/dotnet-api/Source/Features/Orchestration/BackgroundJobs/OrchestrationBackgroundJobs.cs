@@ -98,9 +98,7 @@ public class OrchestrationBackgroundJobs
         var plan = JsonDocument.Parse(orchestration.ApprovedPlan);
         var content = plan.RootElement.GetProperty("content");
         
-        var requiresSubAgents = content.TryGetProperty("requiresSubAgents", out var subAgentsProp) && subAgentsProp.GetBoolean();
-
-        if (requiresSubAgents && content.TryGetProperty("subAgents", out var subAgents))
+        if (content.TryGetProperty("subAgents", out var subAgents))
         {
             foreach (var subAgent in subAgents.EnumerateArray())
             {
@@ -109,7 +107,7 @@ public class OrchestrationBackgroundJobs
         }
         else
         {
-            await CreateMainExecutionAgentAsync(orchestrationId, cursorApiKey, content);
+            _logger.LogWarning("Plan for orchestration {OrchestrationId} has no subAgents", orchestrationId);
         }
 
         Hangfire.BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
@@ -177,53 +175,6 @@ public class OrchestrationBackgroundJobs
         {
             type = "agent_created",
             agent = new { id = planAgentId, name, status = "PENDING", dependsOn }
-        });
-    }
-
-    private async Task CreateMainExecutionAgentAsync(string orchestrationId, string cursorApiKey, JsonElement plan)
-    {
-        var orchestration = await _context.Orchestrations.FindAsync(orchestrationId);
-        if (orchestration == null) return;
-
-        var tasks = plan.TryGetProperty("tasks", out var tasksElement) ? tasksElement.GetRawText() : "[]";
-        var prompt = $"{orchestration.InitialPrompt}\n\nExecution Plan:\n{tasks}";
-
-        var httpClient = new HttpClient();
-        var cursorClient = new CursorApiClient(cursorApiKey, httpClient);
-
-        var cursorAgent = await cursorClient.CreateAgentAsync(new CursorAgentCreateRequest
-        {
-            Prompt = new CursorAgentCreateRequest.PromptData { Text = prompt },
-            Source = new CursorAgentCreateRequest.SourceData
-            {
-                Repository = orchestration.Repository,
-                Ref = orchestration.Ref
-            },
-            Target = new CursorAgentCreateRequest.TargetData
-            {
-                BranchName = $"feature/{orchestrationId}",
-                AutoCreatePr = true
-            }
-        });
-
-        var agent = new AgentModel
-        {
-            OrchestrationId = orchestrationId,
-            CursorAgentId = cursorAgent.Id,
-            Name = "Main Execution Agent",
-            Prompt = prompt,
-            Status = AgentStatusEnum.CREATING,
-            BranchName = $"feature/{orchestrationId}",
-            Metadata = tasks
-        };
-
-        _context.Agents.Add(agent);
-        await _context.SaveChangesAsync();
-
-        await _orchestrationService.CreateEventAsync(orchestrationId, "agent_spawned", new
-        {
-            agentId = cursorAgent.Id,
-            name = "Main Execution Agent"
         });
     }
 

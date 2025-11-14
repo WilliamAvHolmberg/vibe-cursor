@@ -686,8 +686,10 @@ function MessageBubble({
     const plan = message.metadata?.plan;
     if (!plan) return null;
 
-    const agentCount = plan.requiresSubAgents && plan.subAgents ? plan.subAgents.length : 1;
-    const taskCount = plan.tasks ? plan.tasks.length : 0;
+    const agentCount = plan.subAgents ? plan.subAgents.length : 0;
+    const taskCount = plan.subAgents 
+      ? plan.subAgents.reduce((sum: number, agent: any) => sum + (agent.tasks?.length || 0), 0)
+      : 0;
 
     return (
       <div className="flex gap-3 items-start">
