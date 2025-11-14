@@ -19,6 +19,7 @@ export function DashboardPage() {
   const [repository, setRepository] = useState('');
   const [ref, setRef] = useState('main');
   const [prompt, setPrompt] = useState('');
+  const [model, setModel] = useState('Sonnet 4.5');
   const [creating, setCreating] = useState(false);
 
   const { data: orchestrations } = useQuery({
@@ -43,7 +44,7 @@ export function DashboardPage() {
 
     setCreating(true);
     try {
-      const response = await api.orchestration.create({ repository, ref, prompt });
+      const response = await api.orchestration.create({ repository, ref, prompt, model });
       toast({
         title: 'Orchestration Created',
         description: 'Planning phase started',
@@ -209,6 +210,21 @@ export function DashboardPage() {
                     disabled={creating}
                     className="min-h-[120px]"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="model">Planning Agent Model</Label>
+                  <select
+                    id="model"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    disabled={creating}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="Sonnet 4.5">Sonnet 4.5</option>
+                    <option value="GPT 5 Codex">GPT 5 Codex</option>
+                    <option value="Composer 1">Composer 1</option>
+                  </select>
                 </div>
 
                 <div className="flex gap-2">

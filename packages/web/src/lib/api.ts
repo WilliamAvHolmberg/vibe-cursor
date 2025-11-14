@@ -36,7 +36,7 @@ export const api = {
     me: () => apiClient.get('/auth/me'),
   },
   orchestration: {
-    create: (data: { repository: string; ref?: string; prompt: string }) =>
+    create: (data: { repository: string; ref?: string; prompt: string; model?: string }) =>
       apiClient.post('/orchestration/create', data),
     list: () => apiClient.get('/orchestration/list'),
     get: (id: string) => apiClient.get(`/orchestration/${id}`),

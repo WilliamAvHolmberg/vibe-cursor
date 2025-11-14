@@ -29,9 +29,9 @@ public class OrchestrationBackgroundJobs
         _logger = logger;
     }
 
-    public Task StartPlanningPhaseAsync(string orchestrationId, string cursorApiKey)
+    public Task StartPlanningPhaseAsync(string orchestrationId, string cursorApiKey, string? model = null)
     {
-        return _orchestrationService.StartPlanningPhaseAsync(orchestrationId, cursorApiKey);
+        return _orchestrationService.StartPlanningPhaseAsync(orchestrationId, cursorApiKey, model);
     }
 
     public async Task PollPlanningAgentAsync(string orchestrationId, string cursorAgentId, string cursorApiKey)

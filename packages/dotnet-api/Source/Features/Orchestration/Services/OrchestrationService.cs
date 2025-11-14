@@ -36,7 +36,8 @@ public class OrchestrationService
         string cursorApiKey,
         string repository,
         string initialPrompt,
-        string? refBranch = null)
+        string? refBranch = null,
+        string? model = null)
     {
         var orchestration = new OrchestrationModel
         {
@@ -53,11 +54,12 @@ public class OrchestrationService
         await CreateEventAsync(orchestration.Id, "orchestration_created", new
         {
             repository,
-            prompt = initialPrompt
+            prompt = initialPrompt,
+            model = model ?? "Sonnet 4.5"
         });
 
         BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
-            x.StartPlanningPhaseAsync(orchestration.Id, cursorApiKey));
+            x.StartPlanningPhaseAsync(orchestration.Id, cursorApiKey, model));
 
         return orchestration;
     }
@@ -81,7 +83,7 @@ public class OrchestrationService
             .ToListAsync();
     }
 
-    public async Task StartPlanningPhaseAsync(string orchestrationId, string cursorApiKey)
+    public async Task StartPlanningPhaseAsync(string orchestrationId, string cursorApiKey, string? model = null)
     {
         var orchestration = await _context.Orchestrations
             .Include(o => o.FollowUpMessages.OrderBy(f => f.CreatedAt))
@@ -112,14 +114,15 @@ public class OrchestrationService
             orchestration.Repository,
             previousQA.Count > 0 ? previousQA : null);
 
-        var fullPrompt = $"{OrchestrationPrompts.PLANNING_AGENT_SYSTEM_PROMPT}\n\n{prompt}";
+        var modelName = model ?? "Sonnet 4.5";
+        var promptWithModel = $"[Model: {modelName}]\n\n{OrchestrationPrompts.PLANNING_AGENT_SYSTEM_PROMPT}\n\n{prompt}";
 
         var httpClient = new HttpClient();
         var cursorClient = new CursorApiClient(cursorApiKey, httpClient);
 
         var cursorAgent = await cursorClient.CreateAgentAsync(new CursorAgentCreateRequest
         {
-            Prompt = new CursorAgentCreateRequest.PromptData { Text = fullPrompt },
+            Prompt = new CursorAgentCreateRequest.PromptData { Text = promptWithModel },
             Source = new CursorAgentCreateRequest.SourceData
             {
                 Repository = orchestration.Repository,
@@ -137,7 +140,8 @@ public class OrchestrationService
 
         await CreateEventAsync(orchestrationId, "planning_agent_created", new
         {
-            cursorAgentId = cursorAgent.Id
+            cursorAgentId = cursorAgent.Id,
+            model = modelName
         });
 
         BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
