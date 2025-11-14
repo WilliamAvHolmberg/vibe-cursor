@@ -370,6 +370,10 @@ export function OrchestrationDetailPage() {
         name: agent.name,
         status: 'PENDING',
         dependsOnAgentIds: agent.dependsOn || [],
+        description: agent.description,
+        tasks: agent.tasks || [],
+        prompt: agent.prompt,
+        branchName: agent.branchName,
       }))
     : [];
   
