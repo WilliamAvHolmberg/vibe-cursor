@@ -132,6 +132,28 @@ public class OrchestrationController : ControllerBase
         return Ok(new { success = true });
     }
 
+    [HttpPost("{id}/feedback")]
+    public async Task<IActionResult> SendFeedback(string id, [FromBody] SendFeedbackRequest request)
+    {
+        var userId = User.GetUserId();
+        var cursorApiKey = User.GetCursorApiKey();
+
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(cursorApiKey))
+        {
+            return Unauthorized(new { error = "Missing user credentials" });
+        }
+
+        var command = new SendPlanFeedbackCommand(id, userId, cursorApiKey, request.Feedback);
+        var result = await _mediator.Send(command);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        return Ok(new { success = true });
+    }
+
     [HttpPost("{id}/cancel")]
     public async Task<IActionResult> Cancel(string id)
     {
@@ -244,5 +266,9 @@ public record CreateOrchestrationRequest(
 
 public record AnswerQuestionsRequest(
     Dictionary<string, string> Answers
+);
+
+public record SendFeedbackRequest(
+    string Feedback
 );
 

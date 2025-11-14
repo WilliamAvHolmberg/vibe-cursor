@@ -286,6 +286,35 @@ public class OrchestrationService
             x.CreateAgentsFromPlanAsync(orchestrationId, cursorApiKey));
     }
 
+    public async Task SendPlanFeedbackAsync(string orchestrationId, string cursorApiKey, string feedback)
+    {
+        var orchestration = await _context.Orchestrations.FindAsync(orchestrationId);
+        if (orchestration == null || orchestration.Status != OrchestrationStatusEnum.AWAITING_APPROVAL)
+        {
+            throw new InvalidOperationException("Invalid orchestration state");
+        }
+
+        if (string.IsNullOrEmpty(orchestration.PlanningAgentId))
+        {
+            throw new InvalidOperationException("No planning agent found");
+        }
+
+        orchestration.Status = OrchestrationStatusEnum.PLANNING;
+        await _context.SaveChangesAsync();
+
+        var httpClient = new HttpClient();
+        var cursorClient = new CursorApiClient(cursorApiKey, httpClient);
+
+        await cursorClient.AddFollowUpAsync(
+            orchestration.PlanningAgentId,
+            new CursorAgentCreateRequest.PromptData { Text = feedback });
+
+        await CreateEventAsync(orchestrationId, "plan_feedback_sent", new { feedback });
+
+        BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
+            x.PollPlanningAgentAsync(orchestrationId, orchestration.PlanningAgentId, cursorApiKey));
+    }
+
     public async Task CancelOrchestrationAsync(string orchestrationId, string cursorApiKey)
     {
         var orchestration = await _context.Orchestrations

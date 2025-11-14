@@ -6,6 +6,7 @@ import { useWebSocket } from '@/lib/use-websocket';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { EnhancedAgentTree } from '@/components/EnhancedAgentTree';
 import { AgentDetailModal } from '@/components/AgentDetailModal';
@@ -40,6 +41,7 @@ export function OrchestrationDetailPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [feedback, setFeedback] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -296,6 +298,36 @@ export function OrchestrationDetailPage() {
     }
   };
 
+  const handleSendFeedback = async () => {
+    if (!id || !feedback.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter your feedback',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await api.orchestration.feedback(id, feedback);
+      setFeedback('');
+      toast({
+        title: 'Feedback Sent',
+        description: 'The planning agent will revise the plan based on your feedback',
+      });
+      await refetch();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to send feedback',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getStatusBadge = () => {
     if (!orchestration) return null;
 
@@ -446,6 +478,9 @@ export function OrchestrationDetailPage() {
                   setAnswers={setAnswers}
                   onSubmitAnswers={handleAnswerQuestions}
                   onApprovePlan={handleApprovePlan}
+                  onSendFeedback={handleSendFeedback}
+                  feedback={feedback}
+                  setFeedback={setFeedback}
                   submitting={submitting}
                 />
               ))}
@@ -537,6 +572,9 @@ interface MessageBubbleProps {
   setAnswers: (answers: Record<string, string>) => void;
   onSubmitAnswers: () => void;
   onApprovePlan: () => void;
+  onSendFeedback: () => void;
+  feedback: string;
+  setFeedback: (feedback: string) => void;
   submitting: boolean;
 }
 
@@ -546,6 +584,9 @@ function MessageBubble({
   setAnswers,
   onSubmitAnswers,
   onApprovePlan,
+  onSendFeedback,
+  feedback,
+  setFeedback,
   submitting,
 }: MessageBubbleProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -725,14 +766,51 @@ function MessageBubble({
               <ChevronRight className="h-4 w-4" />
               <span>View the execution flow on the right to see all agents and their relationships</span>
             </div>
-            <Button
-              onClick={onApprovePlan}
-              disabled={submitting}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20"
-            >
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Approve Plan (Manual Start)
-            </Button>
+            
+            <div className="space-y-3 border-t border-[#2a2a2a] pt-4">
+              <div className="space-y-2">
+                <label className="text-xs text-gray-400 font-medium">
+                  Request changes or ask for adjustments (optional)
+                </label>
+                <Textarea
+                  placeholder="e.g., Split feature X into smaller agents, or add more tests..."
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  disabled={submitting}
+                  className="bg-[#0d0d0d] border-[#2a2a2a] text-gray-200 placeholder:text-gray-600 min-h-[80px]"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.ctrlKey && feedback.trim()) {
+                      e.preventDefault();
+                      onSendFeedback();
+                    }
+                  }}
+                />
+                <p className="text-xs text-gray-500">Press Ctrl+Enter to send feedback</p>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={onApprovePlan}
+                  disabled={submitting}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20"
+                >
+                  {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Approve Plan
+                </Button>
+                
+                {feedback.trim() && (
+                  <Button
+                    onClick={onSendFeedback}
+                    disabled={submitting}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20"
+                  >
+                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Send Feedback
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
