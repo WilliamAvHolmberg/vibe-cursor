@@ -84,6 +84,7 @@ public class AgentDto
     public string Prompt { get; set; } = string.Empty;
     public AgentStatus Status { get; set; }
     public string? PullRequestUrl { get; set; }
+    public List<string> DependsOnAgentIds { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
@@ -97,6 +98,7 @@ public class AgentDto
             Prompt = entity.Prompt,
             Status = entity.Status,
             PullRequestUrl = entity.PullRequestUrl,
+            DependsOnAgentIds = entity.DependsOnAgentIds,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };

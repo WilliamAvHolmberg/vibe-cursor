@@ -36,7 +36,8 @@ public class OrchestrationService
         string cursorApiKey,
         string repository,
         string initialPrompt,
-        string? refBranch = null)
+        string? refBranch = null,
+        string? model = null)
     {
         var orchestration = new OrchestrationModel
         {
@@ -53,11 +54,12 @@ public class OrchestrationService
         await CreateEventAsync(orchestration.Id, "orchestration_created", new
         {
             repository,
-            prompt = initialPrompt
+            prompt = initialPrompt,
+            model = model ?? "Sonnet 4.5"
         });
 
         BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
-            x.StartPlanningPhaseAsync(orchestration.Id, cursorApiKey));
+            x.StartPlanningPhaseAsync(orchestration.Id, cursorApiKey, model));
 
         return orchestration;
     }
@@ -81,7 +83,7 @@ public class OrchestrationService
             .ToListAsync();
     }
 
-    public async Task StartPlanningPhaseAsync(string orchestrationId, string cursorApiKey)
+    public async Task StartPlanningPhaseAsync(string orchestrationId, string cursorApiKey, string? model = null)
     {
         var orchestration = await _context.Orchestrations
             .Include(o => o.FollowUpMessages.OrderBy(f => f.CreatedAt))
@@ -112,14 +114,15 @@ public class OrchestrationService
             orchestration.Repository,
             previousQA.Count > 0 ? previousQA : null);
 
-        var fullPrompt = $"{OrchestrationPrompts.PLANNING_AGENT_SYSTEM_PROMPT}\n\n{prompt}";
+        var modelName = model ?? "Sonnet 4.5";
+        var promptWithModel = $"[Model: {modelName}]\n\n{OrchestrationPrompts.PLANNING_AGENT_SYSTEM_PROMPT}\n\n{prompt}";
 
         var httpClient = new HttpClient();
         var cursorClient = new CursorApiClient(cursorApiKey, httpClient);
 
         var cursorAgent = await cursorClient.CreateAgentAsync(new CursorAgentCreateRequest
         {
-            Prompt = new CursorAgentCreateRequest.PromptData { Text = fullPrompt },
+            Prompt = new CursorAgentCreateRequest.PromptData { Text = promptWithModel },
             Source = new CursorAgentCreateRequest.SourceData
             {
                 Repository = orchestration.Repository,
@@ -137,7 +140,8 @@ public class OrchestrationService
 
         await CreateEventAsync(orchestrationId, "planning_agent_created", new
         {
-            cursorAgentId = cursorAgent.Id
+            cursorAgentId = cursorAgent.Id,
+            model = modelName
         });
 
         BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
@@ -279,7 +283,36 @@ public class OrchestrationService
         await CreateEventAsync(orchestrationId, "plan_approved", new { });
 
         BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
-            x.ExecutePlanAsync(orchestrationId, cursorApiKey));
+            x.CreateAgentsFromPlanAsync(orchestrationId, cursorApiKey));
+    }
+
+    public async Task SendPlanFeedbackAsync(string orchestrationId, string cursorApiKey, string feedback)
+    {
+        var orchestration = await _context.Orchestrations.FindAsync(orchestrationId);
+        if (orchestration == null || orchestration.Status != OrchestrationStatusEnum.AWAITING_APPROVAL)
+        {
+            throw new InvalidOperationException("Invalid orchestration state");
+        }
+
+        if (string.IsNullOrEmpty(orchestration.PlanningAgentId))
+        {
+            throw new InvalidOperationException("No planning agent found");
+        }
+
+        orchestration.Status = OrchestrationStatusEnum.PLANNING;
+        await _context.SaveChangesAsync();
+
+        var httpClient = new HttpClient();
+        var cursorClient = new CursorApiClient(cursorApiKey, httpClient);
+
+        await cursorClient.AddFollowUpAsync(
+            orchestration.PlanningAgentId,
+            new CursorAgentCreateRequest.PromptData { Text = feedback });
+
+        await CreateEventAsync(orchestrationId, "plan_feedback_sent", new { feedback });
+
+        BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
+            x.PollPlanningAgentAsync(orchestrationId, orchestration.PlanningAgentId, cursorApiKey));
     }
 
     public async Task CancelOrchestrationAsync(string orchestrationId, string cursorApiKey)

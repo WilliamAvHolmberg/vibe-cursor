@@ -29,9 +29,9 @@ public class OrchestrationBackgroundJobs
         _logger = logger;
     }
 
-    public Task StartPlanningPhaseAsync(string orchestrationId, string cursorApiKey)
+    public Task StartPlanningPhaseAsync(string orchestrationId, string cursorApiKey, string? model = null)
     {
-        return _orchestrationService.StartPlanningPhaseAsync(orchestrationId, cursorApiKey);
+        return _orchestrationService.StartPlanningPhaseAsync(orchestrationId, cursorApiKey, model);
     }
 
     public async Task PollPlanningAgentAsync(string orchestrationId, string cursorAgentId, string cursorApiKey)
@@ -90,7 +90,7 @@ public class OrchestrationBackgroundJobs
         }
     }
 
-    public async Task ExecutePlanAsync(string orchestrationId, string cursorApiKey)
+    public async Task CreateAgentsFromPlanAsync(string orchestrationId, string cursorApiKey)
     {
         var orchestration = await _context.Orchestrations.FindAsync(orchestrationId);
         if (orchestration == null || string.IsNullOrEmpty(orchestration.ApprovedPlan)) return;
@@ -98,9 +98,7 @@ public class OrchestrationBackgroundJobs
         var plan = JsonDocument.Parse(orchestration.ApprovedPlan);
         var content = plan.RootElement.GetProperty("content");
         
-        var requiresSubAgents = content.TryGetProperty("requiresSubAgents", out var subAgentsProp) && subAgentsProp.GetBoolean();
-
-        if (requiresSubAgents && content.TryGetProperty("subAgents", out var subAgents))
+        if (content.TryGetProperty("subAgents", out var subAgents))
         {
             foreach (var subAgent in subAgents.EnumerateArray())
             {
@@ -109,11 +107,16 @@ public class OrchestrationBackgroundJobs
         }
         else
         {
-            await CreateMainExecutionAgentAsync(orchestrationId, cursorApiKey, content);
+            _logger.LogWarning("Plan for orchestration {OrchestrationId} has no subAgents", orchestrationId);
         }
 
         Hangfire.BackgroundJob.Enqueue<OrchestrationBackgroundJobs>(x =>
             x.MonitorExecutionAsync(orchestrationId, cursorApiKey));
+    }
+
+    public async Task ExecutePlanAsync(string orchestrationId, string cursorApiKey)
+    {
+        await CreateAgentsFromPlanAsync(orchestrationId, cursorApiKey);
     }
 
     private async Task CreateSubAgentAsync(string orchestrationId, string cursorApiKey, JsonElement spec)
@@ -124,97 +127,54 @@ public class OrchestrationBackgroundJobs
         var name = spec.GetProperty("name").GetString() ?? "Sub Agent";
         var prompt = spec.GetProperty("prompt").GetString() ?? "";
         var branchName = spec.TryGetProperty("branchName", out var branch) ? branch.GetString() : null;
-        var agentId = spec.TryGetProperty("id", out var id) ? id.GetString() : Guid.NewGuid().ToString();
-
-        var httpClient = new HttpClient();
-        var cursorClient = new CursorApiClient(cursorApiKey, httpClient);
-
-        var cursorAgent = await cursorClient.CreateAgentAsync(new CursorAgentCreateRequest
+        var planAgentId = spec.TryGetProperty("id", out var id) ? id.GetString() : null;
+        
+        if (string.IsNullOrEmpty(planAgentId))
         {
-            Prompt = new CursorAgentCreateRequest.PromptData { Text = prompt },
-            Source = new CursorAgentCreateRequest.SourceData
-            {
-                Repository = orchestration.Repository,
-                Ref = orchestration.Ref
-            },
-            Target = new CursorAgentCreateRequest.TargetData
-            {
-                BranchName = branchName ?? $"feature/{agentId}",
-                AutoCreatePr = true
-            }
-        });
+            planAgentId = Guid.NewGuid().ToString();
+        }
+        
+        var existingAgent = await _context.Agents
+            .FirstOrDefaultAsync(a => a.OrchestrationId == orchestrationId && a.Id == planAgentId);
+        
+        if (existingAgent != null)
+        {
+            _logger.LogWarning("Agent {AgentId} already exists for orchestration {OrchestrationId}, skipping creation", planAgentId, orchestrationId);
+            return;
+        }
+        
+        var dependsOn = new List<string>();
+        if (spec.TryGetProperty("dependsOn", out var dependsOnProp) && dependsOnProp.ValueKind == JsonValueKind.Array)
+        {
+            dependsOn = dependsOnProp.EnumerateArray().Select(e => e.GetString() ?? "").Where(s => !string.IsNullOrEmpty(s)).ToList();
+        }
 
         var agent = new AgentModel
         {
+            Id = planAgentId,
             OrchestrationId = orchestrationId,
-            CursorAgentId = cursorAgent.Id,
             Name = name,
             Prompt = prompt,
-            Status = AgentStatusEnum.CREATING,
+            Status = AgentStatusEnum.PENDING,
             BranchName = branchName,
+            DependsOnAgentIds = dependsOn,
             Metadata = spec.GetRawText()
         };
 
         _context.Agents.Add(agent);
         await _context.SaveChangesAsync();
 
-        await _orchestrationService.CreateEventAsync(orchestrationId, "agent_spawned", new
+        await _orchestrationService.CreateEventAsync(orchestrationId, "agent_created", new
         {
-            agentId = cursorAgent.Id,
-            name
+            agentId = planAgentId,
+            name,
+            dependsOn
         });
 
         await _orchestrationService.BroadcastToOrchestrationAsync(orchestrationId, new
         {
-            type = "agent_spawned",
-            agent = new { id = cursorAgent.Id, name, status = "CREATING" }
-        });
-    }
-
-    private async Task CreateMainExecutionAgentAsync(string orchestrationId, string cursorApiKey, JsonElement plan)
-    {
-        var orchestration = await _context.Orchestrations.FindAsync(orchestrationId);
-        if (orchestration == null) return;
-
-        var tasks = plan.TryGetProperty("tasks", out var tasksElement) ? tasksElement.GetRawText() : "[]";
-        var prompt = $"{orchestration.InitialPrompt}\n\nExecution Plan:\n{tasks}";
-
-        var httpClient = new HttpClient();
-        var cursorClient = new CursorApiClient(cursorApiKey, httpClient);
-
-        var cursorAgent = await cursorClient.CreateAgentAsync(new CursorAgentCreateRequest
-        {
-            Prompt = new CursorAgentCreateRequest.PromptData { Text = prompt },
-            Source = new CursorAgentCreateRequest.SourceData
-            {
-                Repository = orchestration.Repository,
-                Ref = orchestration.Ref
-            },
-            Target = new CursorAgentCreateRequest.TargetData
-            {
-                BranchName = $"feature/{orchestrationId}",
-                AutoCreatePr = true
-            }
-        });
-
-        var agent = new AgentModel
-        {
-            OrchestrationId = orchestrationId,
-            CursorAgentId = cursorAgent.Id,
-            Name = "Main Execution Agent",
-            Prompt = prompt,
-            Status = AgentStatusEnum.CREATING,
-            BranchName = $"feature/{orchestrationId}",
-            Metadata = tasks
-        };
-
-        _context.Agents.Add(agent);
-        await _context.SaveChangesAsync();
-
-        await _orchestrationService.CreateEventAsync(orchestrationId, "agent_spawned", new
-        {
-            agentId = cursorAgent.Id,
-            name = "Main Execution Agent"
+            type = "agent_created",
+            agent = new { id = planAgentId, name, status = "PENDING", dependsOn }
         });
     }
 
@@ -245,9 +205,16 @@ public class OrchestrationBackgroundJobs
 
                 bool allCompleted = true;
                 bool anyFailed = false;
+                bool anyRunning = false;
 
                 foreach (var agent in agents)
                 {
+                    if (agent.Status == AgentStatusEnum.PENDING)
+                    {
+                        allCompleted = false;
+                        continue;
+                    }
+
                     if (string.IsNullOrEmpty(agent.CursorAgentId)) continue;
 
                     try
@@ -260,6 +227,11 @@ public class OrchestrationBackgroundJobs
                             agent.Status = newStatus;
                             agent.PullRequestUrl = cursorAgent.Target?.Url;
                             agent.UpdatedAt = DateTime.UtcNow;
+
+                            if (newStatus == AgentStatusEnum.COMPLETED)
+                            {
+                                agent.CompletedAt = DateTime.UtcNow;
+                            }
 
                             _context.AgentStatusUpdates.Add(new AgentStatusUpdateModel
                             {
@@ -286,6 +258,7 @@ public class OrchestrationBackgroundJobs
 
                         if (newStatus != AgentStatusEnum.COMPLETED) allCompleted = false;
                         if (newStatus == AgentStatusEnum.FAILED) anyFailed = true;
+                        if (newStatus == AgentStatusEnum.RUNNING || newStatus == AgentStatusEnum.CREATING) anyRunning = true;
                     }
                     catch (Exception ex)
                     {
@@ -293,7 +266,7 @@ public class OrchestrationBackgroundJobs
                     }
                 }
 
-                if (allCompleted || anyFailed)
+                if (allCompleted || (anyFailed && !anyRunning))
                 {
                     var orchestration = await _context.Orchestrations.FindAsync(orchestrationId);
                     if (orchestration != null)
@@ -332,6 +305,76 @@ public class OrchestrationBackgroundJobs
             "CANCELLED" => AgentStatusEnum.CANCELLED,
             _ => AgentStatusEnum.RUNNING
         };
+    }
+
+    public async Task<bool> StartAgentAsync(string agentId, string cursorApiKey)
+    {
+        var agent = await _context.Agents
+            .Include(a => a.Orchestration)
+            .FirstOrDefaultAsync(a => a.Id == agentId);
+
+        if (agent == null)
+        {
+            _logger.LogError("Agent {AgentId} not found", agentId);
+            return false;
+        }
+
+        if (agent.Status != AgentStatusEnum.PENDING)
+        {
+            _logger.LogWarning("Agent {AgentId} is not in PENDING state", agentId);
+            return false;
+        }
+
+        var allAgents = await _context.Agents
+            .Where(a => a.OrchestrationId == agent.OrchestrationId)
+            .ToListAsync();
+
+        foreach (var depId in agent.DependsOnAgentIds)
+        {
+            var depAgent = allAgents.FirstOrDefault(a => a.Id == depId);
+            if (depAgent == null || depAgent.Status != AgentStatusEnum.COMPLETED)
+            {
+                _logger.LogWarning("Agent {AgentId} dependency {DepId} not completed", agentId, depId);
+                return false;
+            }
+        }
+
+        var httpClient = new HttpClient();
+        var cursorClient = new CursorApiClient(cursorApiKey, httpClient);
+
+        var cursorAgent = await cursorClient.CreateAgentAsync(new CursorAgentCreateRequest
+        {
+            Prompt = new CursorAgentCreateRequest.PromptData { Text = agent.Prompt },
+            Source = new CursorAgentCreateRequest.SourceData
+            {
+                Repository = agent.Orchestration.Repository,
+                Ref = agent.Orchestration.Ref
+            },
+            Target = new CursorAgentCreateRequest.TargetData
+            {
+                BranchName = agent.BranchName ?? $"feature/{agentId}",
+                AutoCreatePr = true
+            }
+        });
+
+        agent.CursorAgentId = cursorAgent.Id;
+        agent.Status = AgentStatusEnum.CREATING;
+        agent.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        await _orchestrationService.CreateEventAsync(agent.OrchestrationId, "agent_started", new
+        {
+            agentId,
+            cursorAgentId = cursorAgent.Id
+        });
+
+        await _orchestrationService.BroadcastToOrchestrationAsync(agent.OrchestrationId, new
+        {
+            type = "agent_started",
+            agent = new { id = agentId, cursorAgentId = cursorAgent.Id, status = "CREATING" }
+        });
+
+        return true;
     }
 }
 

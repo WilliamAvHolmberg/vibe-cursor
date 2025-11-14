@@ -13,6 +13,7 @@ public class Agent
     public string? PullRequestUrl { get; set; }
     public string? Error { get; set; }
     public string? Metadata { get; set; }
+    public List<string> DependsOnAgentIds { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }

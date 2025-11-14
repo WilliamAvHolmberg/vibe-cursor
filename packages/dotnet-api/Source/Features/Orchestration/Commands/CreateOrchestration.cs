@@ -10,7 +10,8 @@ public record CreateOrchestrationCommand(
     string CursorApiKey,
     string Repository,
     string Prompt,
-    string? Ref = null
+    string? Ref = null,
+    string? Model = null
 ) : ICommand<Result<CreateOrchestrationResponse>>;
 
 public record CreateOrchestrationResponse(
@@ -36,7 +37,8 @@ public class CreateOrchestrationCommandHandler : ICommandHandler<CreateOrchestra
             request.CursorApiKey,
             request.Repository,
             request.Prompt,
-            request.Ref);
+            request.Ref,
+            request.Model);
 
         return Result.Success(new CreateOrchestrationResponse(
             orchestration.Id,

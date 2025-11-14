@@ -36,7 +36,7 @@ export const api = {
     me: () => apiClient.get('/auth/me'),
   },
   orchestration: {
-    create: (data: { repository: string; ref?: string; prompt: string }) =>
+    create: (data: { repository: string; ref?: string; prompt: string; model?: string }) =>
       apiClient.post('/orchestration/create', data),
     list: () => apiClient.get('/orchestration/list'),
     get: (id: string) => apiClient.get(`/orchestration/${id}`),
@@ -44,6 +44,10 @@ export const api = {
     answer: (id: string, answers: Record<string, string>) =>
       apiClient.post(`/orchestration/${id}/answer`, { answers }),
     approve: (id: string) => apiClient.post(`/orchestration/${id}/approve`),
+    feedback: (id: string, feedback: string) =>
+      apiClient.post(`/orchestration/${id}/feedback`, { feedback }),
     cancel: (id: string) => apiClient.post(`/orchestration/${id}/cancel`),
+    delete: (id: string) => apiClient.delete(`/orchestration/${id}`),
+    startAgent: (agentId: string) => apiClient.post(`/orchestration/agent/${agentId}/start`),
   },
 };
