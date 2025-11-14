@@ -108,42 +108,57 @@ CRITICAL RULES FOR SUB-AGENTS & PARALLELIZATION:
    - Agent 3: ""Translate Settings"" (depends on agent2)   ← These should be
    - Agent 4: ""Translate Reports"" (depends on agent3)    ← parallel!
    
-   ✅ **GOOD - Multiple parallel waves:**
-   - Agent 1: ""Create API utilities"" (no deps)          ← Wave 1
-   - Agent 2: ""Create auth endpoints"" (depends on agent1) ←┐
-   - Agent 3: ""Create user endpoints"" (depends on agent1)  ├─ Wave 2 (parallel)
-   - Agent 4: ""Auth UI"" (depends on agent2)              ←┐
-   - Agent 5: ""User UI"" (depends on agent3)              ├─ Wave 3 (parallel)
+   ✅ **GOOD - Multiple parallel waves (full-stack features):**
+   - Agent 1: ""Create shared utilities"" (no deps)       ← Wave 1
+   - Agent 2: ""Auth feature (API + UI)"" (depends on agent1) ←┐
+   - Agent 3: ""User mgmt (API + UI)"" (depends on agent1)    ├─ Wave 2 (parallel)
+   - Agent 4: ""Reporting (API + UI)"" (depends on agent1)    ┘
    
 5. **How to split work for parallelization**:
    
    ALWAYS ask yourself: ""How can I break this into INDEPENDENT pieces?""
    
-   **By Module:**
-   - Auth module, Dashboard module, Settings module, Reports module
-   - Each can work independently and in parallel
+   **CRITICAL: Split by COMPLETE FEATURES, not by layers!**
    
-   **By Layer:**
-   - Backend API (Wave 1) → Frontend UI (Wave 2, depends on API)
-   - Database migrations (Wave 1) → Data operations (Wave 2)
+   ✅ **CORRECT - By Feature (Full Stack)**:
+   Each agent owns a COMPLETE feature (backend + frontend together):
+   - Agent 1: ""User Registration"" (API endpoints + UI forms)
+   - Agent 2: ""Password Reset"" (API endpoints + UI flow)
+   - Agent 3: ""Profile Management"" (API endpoints + UI pages)
+   - Agent 4: ""Two-Factor Auth"" (API endpoints + UI components)
    
-   **By Feature:**
-   - User registration, Password reset, Profile management, 2FA
-   - Each is independent and can be parallelized
+   Why? The agent creating the backend API best understands how to create the frontend!
    
-   **Example: "Add dark mode to the app"**
-   ✅ GOOD approach (parallelized):
-   - Agent 1: ""Setup dark mode infrastructure"" (no deps)
-     tasks: [""Add theme provider"", ""Create CSS variables"", ""Add toggle logic""]
-   - Agent 2: ""Dark mode for Auth pages"" (depends on agent1)
-   - Agent 3: ""Dark mode for Dashboard"" (depends on agent1)
-   - Agent 4: ""Dark mode for Settings"" (depends on agent1)
-   - Agent 5: ""Dark mode for Reports"" (depends on agent1)
-   → Agents 2-5 all run in PARALLEL = FAST!
+   ❌ **WRONG - By Layer (Split backend/frontend)**:
+   - Agent 1: ""Create all backend APIs"" (backend only)
+   - Agent 2: ""Create all frontend UIs"" (frontend only, depends on agent1)
    
-   ❌ BAD approach (sequential):
-   - Agent 1: ""Analyze theme usage"" ← NO! You do this!
-   - Agent 2: ""Implement dark mode"" ← Too big, not parallelized!
+   Why wrong? Agent 2 has to figure out Agent 1's API. Slower and error-prone!
+   
+   **By Module/Area (Full Stack)**:
+   - Auth module (all auth features, backend + frontend)
+   - Dashboard module (all dashboard features, backend + frontend)
+   - Settings module (all settings features, backend + frontend)
+   - Reports module (all reports features, backend + frontend)
+   
+   Each agent handles BOTH backend AND frontend for their area!
+   
+   **Example: "Add payment system"**
+   ✅ GOOD approach (full-stack features in parallel):
+   - Agent 1: ""Payment infrastructure"" (no deps)
+     tasks: [""Add Stripe SDK"", ""Create payment DB models"", ""Add payment utilities""]
+   - Agent 2: ""Subscription feature (API + UI)"" (depends on agent1)
+     tasks: [""Subscription endpoints"", ""Plan selection UI"", ""Payment form""]
+   - Agent 3: ""Invoice feature (API + UI)"" (depends on agent1)
+     tasks: [""Invoice endpoints"", ""Invoice list UI"", ""PDF generation""]
+   - Agent 4: ""Payment history (API + UI)"" (depends on agent1)
+     tasks: [""History endpoints"", ""Transaction list UI"", ""Export function""]
+   → Agents 2-4 all run in PARALLEL, each owns complete feature = FAST!
+   
+   ❌ BAD approach (split by layer):
+   - Agent 1: ""Payment APIs"" (all backend)
+   - Agent 2: ""Payment UI"" (all frontend, depends on agent1)
+   ← Agent 2 has to figure out Agent 1's work. Slow and error-prone!
 
 6. **When to use dependencies (and when NOT to)**:
    
@@ -228,22 +243,27 @@ User: ""Add internationalization to the backoffice web app""
 ```
 Result: 1 agent runs, then 4 agents run IN PARALLEL = FAST!
 
-**Example 2: Full Stack Feature**
+**Example 2: Multiple Full-Stack Features**
 
-User: ""Add user profile management""
+User: ""Add user management system with profiles, roles, and activity logs""
 
 ✅ YOUR THOUGHT PROCESS:
-1. Need backend API first (shared dependency)
-2. Then frontend can use that API
-3. Frontend has multiple pages that can work in parallel
+1. Need shared user utilities first (validation, permissions helpers)
+2. Then each feature can be built independently (backend + frontend together)
+3. Each agent owns the complete feature end-to-end
 
 ✅ YOUR PLAN:
-- Agent 1: ""Profile API endpoints"" (no deps)
-- Agent 2: ""Profile page UI"" (depends on agent1)
-- Agent 3: ""Avatar upload component"" (depends on agent1)
-- Agent 4: ""Settings integration"" (depends on agent1)
+- Agent 1: ""Shared User Utilities"" (no deps)
+  tasks: [""Create validation functions"", ""Create permission helpers"", ""Add DB models""]
+- Agent 2: ""User Profile Feature"" (depends on agent1)
+  tasks: [""Profile API endpoints"", ""Profile page UI"", ""Avatar upload""]
+- Agent 3: ""Role Management Feature"" (depends on agent1)
+  tasks: [""Roles API endpoints"", ""Roles admin UI"", ""Permission assignment""]
+- Agent 4: ""Activity Logs Feature"" (depends on agent1)
+  tasks: [""Logging API endpoints"", ""Activity log UI"", ""Log filtering""]
 
-Result: 1 API agent, then 3 UI agents IN PARALLEL!
+Result: 1 shared agent, then 3 FULL-STACK agents IN PARALLEL!
+Each agent owns complete feature from DB to UI!
 
 **Example 3: What NOT to do**
 
