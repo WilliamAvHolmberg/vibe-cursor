@@ -10,10 +10,17 @@ export type EnvironmentPreset =
   | 'rainbow'
   | 'stars';
 
+export interface ImageData {
+  id: string;
+  url: string;
+  position: [number, number, number];
+  scale: number;
+}
+
 export interface CharacterData {
   character: string;
   color: string;
-  imageUrl: string | null;
+  images: ImageData[];
 }
 
 export interface StorageData {

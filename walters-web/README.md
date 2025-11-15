@@ -7,7 +7,10 @@ An interactive 3D educational web application built with React Three Fiber for y
 - **3D Interactive Letters & Numbers**: Beautiful 3D animated characters (A-Z and 1-9)
 - **Easy Navigation**: Simple arrow buttons to move between letters/numbers
 - **Color Customization**: Pick any color for each letter/number
-- **Personal Images**: Attach photos to letters (like grandma's photo on "G"!)
+- **Multiple Images**: Add UNLIMITED photos to each character!
+- **Interactive Gizmo**: Click, drag to move, SHIFT+drag to resize images in 3D space
+- **8 Real 3D Backgrounds**: Ocean with animated water, Space with planets, Forest with trees, and more!
+- **Zoom & Pan**: Full camera control - zoom in/out and pan around the scene
 - **Smooth Animations**: Floating and rotating 3D characters
 - **Touch-Friendly**: Great for tablets and touch devices
 - **LocalStorage**: All customizations are saved locally
@@ -35,13 +38,20 @@ npm run build
 2. **Switch Mode**: Click the "ABC" or "123" button (or press Space/Enter) to toggle between letters and numbers
 3. **Change Color**: Click the color picker at the top to choose a color for the current character
 4. **Change Background**: Select from 8 different **REAL 3D environments** (Ocean with animated water, Space with planets, Forest with trees, and more!)
-5. **Add Photo**: Click "Add Photo" to upload an image for the current character
-6. **Remove Photo**: Click the trash icon to remove the attached photo
+5. **Add Photos**: Click "📷 Add Photo" to upload images - add as many as you want!
+6. **Move & Resize Images**: 
+   - Click any image to select it
+   - Drag to move it in 3D space
+   - Hold SHIFT and drag to resize
+   - Press DELETE to remove
+7. **Zoom & Pan**: Scroll to zoom, right-click drag to pan
 
 ### Keyboard Shortcuts
 - **← Arrow Key**: Previous letter/number
 - **→ Arrow Key**: Next letter/number
 - **Space or Enter**: Toggle between letters and numbers
+- **DELETE**: Remove selected image
+- **SHIFT + Drag**: Resize selected image
 
 ### Available 3D Backgrounds
 - 🌊 **Ocean** - Animated water waves with sky (default)

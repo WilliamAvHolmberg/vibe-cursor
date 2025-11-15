@@ -1,21 +1,35 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Character3D } from './Character3D';
-import { ImagePlane } from './ImagePlane';
+import { InteractiveImage } from './InteractiveImage';
 import { BackgroundScene } from './BackgroundScene';
 import { Suspense } from 'react';
-import type { EnvironmentPreset } from '../types';
+import type { EnvironmentPreset, ImageData } from '../types';
 
 interface Scene3DProps {
   character: string;
   color: string;
-  imageUrl: string | null;
+  images: ImageData[];
   background: EnvironmentPreset;
+  selectedImageId: string | null;
+  onSelectImage: (id: string | null) => void;
+  onUpdateImage: (imageId: string, position: [number, number, number], scale: number) => void;
 }
 
-export const Scene3D = ({ character, color, imageUrl, background }: Scene3DProps) => {
+export const Scene3D = ({ 
+  character, 
+  color, 
+  images,
+  background,
+  selectedImageId,
+  onSelectImage,
+  onUpdateImage
+}: Scene3DProps) => {
   return (
-    <Canvas camera={{ position: [0, 0, 8], fov: 50 }}>
+    <Canvas 
+      camera={{ position: [0, 0, 8], fov: 50 }}
+      onClick={() => onSelectImage(null)}
+    >
       <ambientLight intensity={0.6} />
       <pointLight position={[10, 10, 10]} intensity={1.2} />
       <pointLight position={[-10, -10, -10]} intensity={0.5} />
@@ -24,14 +38,23 @@ export const Scene3D = ({ character, color, imageUrl, background }: Scene3DProps
       <Suspense fallback={null}>
         <BackgroundScene type={background} />
         <Character3D character={character} color={color} />
-        {imageUrl && <ImagePlane imageUrl={imageUrl} />}
+        
+        {images.map((imageData) => (
+          <InteractiveImage
+            key={imageData.id}
+            imageData={imageData}
+            isSelected={selectedImageId === imageData.id}
+            onSelect={() => onSelectImage(imageData.id)}
+            onTransform={(position, scale) => onUpdateImage(imageData.id, position, scale)}
+          />
+        ))}
       </Suspense>
       
       <OrbitControls 
-        enableZoom={false} 
-        enablePan={false}
-        maxPolarAngle={Math.PI / 2}
-        minPolarAngle={Math.PI / 2}
+        enableZoom={true}
+        enablePan={true}
+        minDistance={3}
+        maxDistance={20}
       />
     </Canvas>
   );

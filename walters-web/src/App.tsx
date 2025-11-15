@@ -22,7 +22,8 @@ const BACKGROUNDS: { value: EnvironmentPreset; label: string; emoji: string }[] 
 function App() {
   const [mode, setMode] = useState<Mode>('letters');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const { getCharacterData, updateCharacter } = useCharacterStorage();
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const { getCharacterData, updateCharacter, addImage, updateImage, removeImage } = useCharacterStorage();
   const { background, setBackground } = useAppSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,10 +33,12 @@ function App() {
 
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : currentList.length - 1));
+    setSelectedImageId(null);
   };
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev < currentList.length - 1 ? prev + 1 : 0));
+    setSelectedImageId(null);
   };
 
   useEffect(() => {
@@ -47,16 +50,19 @@ function App() {
       } else if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         handleModeToggle();
+      } else if (e.key === 'Delete' && selectedImageId) {
+        handleRemoveImage(selectedImageId);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, mode]);
+  }, [currentIndex, mode, selectedImageId]);
 
   const handleModeToggle = () => {
     setMode((prev) => (prev === 'letters' ? 'numbers' : 'letters'));
     setCurrentIndex(0);
+    setSelectedImageId(null);
   };
 
   const handleColorChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -69,18 +75,26 @@ function App() {
       const reader = new FileReader();
       reader.onload = (event) => {
         const imageUrl = event.target?.result as string;
-        updateCharacter(currentCharacter, { imageUrl });
+        addImage(currentCharacter, imageUrl);
       };
       reader.readAsDataURL(file);
     }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
-  const handleRemoveImage = () => {
-    updateCharacter(currentCharacter, { imageUrl: null });
+  const handleRemoveImage = (imageId: string) => {
+    removeImage(currentCharacter, imageId);
+    setSelectedImageId(null);
   };
 
   const handleBackgroundChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setBackground(e.target.value as EnvironmentPreset);
+  };
+
+  const handleUpdateImage = (imageId: string, position: [number, number, number], scale: number) => {
+    updateImage(currentCharacter, imageId, position, scale);
   };
 
   return (
@@ -89,8 +103,11 @@ function App() {
         <Scene3D 
           character={currentCharacter}
           color={characterData.color}
-          imageUrl={characterData.imageUrl}
+          images={characterData.images}
           background={background}
+          selectedImageId={selectedImageId}
+          onSelectImage={setSelectedImageId}
+          onUpdateImage={handleUpdateImage}
         />
       </div>
 
@@ -134,22 +151,39 @@ function App() {
           >
             📷 Add Photo
           </button>
-          {characterData.imageUrl && (
-            <>
-              <img 
-                src={characterData.imageUrl} 
-                alt="Preview" 
-                className="image-preview"
-              />
-              <button 
-                className="image-button"
-                onClick={handleRemoveImage}
-              >
-                🗑️ Remove
-              </button>
-            </>
-          )}
+          <span className="image-count">
+            {characterData.images.length} photo{characterData.images.length !== 1 ? 's' : ''}
+          </span>
         </div>
+      </div>
+
+      <div className="images-panel">
+        {characterData.images.map((img) => (
+          <div 
+            key={img.id} 
+            className={`image-thumbnail ${selectedImageId === img.id ? 'selected' : ''}`}
+            onClick={() => setSelectedImageId(img.id)}
+          >
+            <img src={img.url} alt="Attached" />
+            <button 
+              className="delete-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemoveImage(img.id);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="controls-info">
+        {selectedImageId && (
+          <div className="help-text">
+            💡 Drag to move • Hold SHIFT + drag to resize • Press DELETE to remove
+          </div>
+        )}
       </div>
 
       <div className="controls">
