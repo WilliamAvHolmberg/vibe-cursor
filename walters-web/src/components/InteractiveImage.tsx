@@ -68,11 +68,12 @@ export const InteractiveImage = ({
         }}
       >
         <planeGeometry args={[2, 2]} />
-        <meshStandardMaterial 
+        <meshBasicMaterial 
           map={texture} 
           side={THREE.DoubleSide}
           transparent
           opacity={isSelected ? 1 : 0.9}
+          toneMapped={false}
         />
       </mesh>
       
