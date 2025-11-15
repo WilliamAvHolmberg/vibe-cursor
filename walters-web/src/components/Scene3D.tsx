@@ -3,14 +3,16 @@ import { OrbitControls, Environment, Stars } from '@react-three/drei';
 import { Character3D } from './Character3D';
 import { ImagePlane } from './ImagePlane';
 import { Suspense } from 'react';
+import type { EnvironmentPreset } from '../types';
 
 interface Scene3DProps {
   character: string;
   color: string;
   imageUrl: string | null;
+  background: EnvironmentPreset;
 }
 
-export const Scene3D = ({ character, color, imageUrl }: Scene3DProps) => {
+export const Scene3D = ({ character, color, imageUrl, background }: Scene3DProps) => {
   return (
     <Canvas camera={{ position: [0, 0, 8], fov: 50 }}>
       <color attach="background" args={['#1a1a2e']} />
@@ -23,7 +25,7 @@ export const Scene3D = ({ character, color, imageUrl }: Scene3DProps) => {
       <Suspense fallback={null}>
         <Character3D character={character} color={color} />
         {imageUrl && <ImagePlane imageUrl={imageUrl} />}
-        <Environment preset="sunset" />
+        <Environment preset={background} />
         <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
       </Suspense>
       

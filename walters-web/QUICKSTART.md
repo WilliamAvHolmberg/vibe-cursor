@@ -28,8 +28,16 @@ The app will open at `http://localhost:5173`
 - **← →** arrows (on screen or keyboard): Navigate between letters/numbers
 - **ABC/123 button** (or Space/Enter key): Switch between letters and numbers  
 - **Color picker**: Change the color of the current character
+- **Background selector**: Choose from 10 different 3D environments (Forest, City, Night, etc.)
 - **📷 Add Photo**: Upload an image from your device
 - **🗑️ Remove**: Delete the attached photo
+
+### Fun Backgrounds to Try:
+- 🌲 **Forest** - Perfect for nature letters (T for Tree!)
+- 🏙️ **City** - Great for urban learning
+- 🌙 **Night** - Magical evening atmosphere
+- 🌅 **Sunset** - Warm and colorful (default)
+- 🏠 **Apartment** - Cozy indoor feeling
 
 ## 💡 Fun Learning Activities
 

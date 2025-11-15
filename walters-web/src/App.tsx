@@ -2,15 +2,30 @@ import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import './App.css';
 import { Scene3D } from './components/Scene3D';
 import { useCharacterStorage } from './hooks/useCharacterStorage';
-import type { Mode } from './types';
+import { useAppSettings } from './hooks/useAppSettings';
+import type { Mode, EnvironmentPreset } from './types';
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const NUMBERS = '123456789'.split('');
+
+const BACKGROUNDS: { value: EnvironmentPreset; label: string; emoji: string }[] = [
+  { value: 'sunset', label: 'Sunset', emoji: '🌅' },
+  { value: 'dawn', label: 'Dawn', emoji: '🌄' },
+  { value: 'night', label: 'Night', emoji: '🌙' },
+  { value: 'warehouse', label: 'Warehouse', emoji: '🏭' },
+  { value: 'forest', label: 'Forest', emoji: '🌲' },
+  { value: 'apartment', label: 'Apartment', emoji: '🏠' },
+  { value: 'studio', label: 'Studio', emoji: '🎬' },
+  { value: 'city', label: 'City', emoji: '🏙️' },
+  { value: 'park', label: 'Park', emoji: '🌳' },
+  { value: 'lobby', label: 'Lobby', emoji: '🏛️' },
+];
 
 function App() {
   const [mode, setMode] = useState<Mode>('letters');
   const [currentIndex, setCurrentIndex] = useState(0);
   const { getCharacterData, updateCharacter } = useCharacterStorage();
+  const { background, setBackground } = useAppSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentList = mode === 'letters' ? LETTERS : NUMBERS;
@@ -66,6 +81,10 @@ function App() {
     updateCharacter(currentCharacter, { imageUrl: null });
   };
 
+  const handleBackgroundChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setBackground(e.target.value as EnvironmentPreset);
+  };
+
   return (
     <div className="app-container">
       <div className="canvas-container">
@@ -73,6 +92,7 @@ function App() {
           character={currentCharacter}
           color={characterData.color}
           imageUrl={characterData.imageUrl}
+          background={background}
         />
       </div>
 
@@ -85,6 +105,21 @@ function App() {
             onChange={handleColorChange}
             className="color-picker"
           />
+        </div>
+
+        <div className="background-selector-container">
+          <span className="background-label">Background:</span>
+          <select
+            value={background}
+            onChange={handleBackgroundChange}
+            className="background-selector"
+          >
+            {BACKGROUNDS.map((bg) => (
+              <option key={bg.value} value={bg.value}>
+                {bg.emoji} {bg.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="image-controls">

@@ -34,13 +34,26 @@ npm run build
 1. **Navigate**: Use the ← and → arrow buttons (or keyboard arrow keys) to move through letters or numbers
 2. **Switch Mode**: Click the "ABC" or "123" button (or press Space/Enter) to toggle between letters and numbers
 3. **Change Color**: Click the color picker at the top to choose a color for the current character
-4. **Add Photo**: Click "Add Photo" to upload an image for the current character
-5. **Remove Photo**: Click the trash icon to remove the attached photo
+4. **Change Background**: Select from 10 different 3D environments (Sunset, Forest, City, etc.)
+5. **Add Photo**: Click "Add Photo" to upload an image for the current character
+6. **Remove Photo**: Click the trash icon to remove the attached photo
 
 ### Keyboard Shortcuts
 - **← Arrow Key**: Previous letter/number
 - **→ Arrow Key**: Next letter/number
 - **Space or Enter**: Toggle between letters and numbers
+
+### Available Backgrounds
+- 🌅 **Sunset** - Warm, colorful sky
+- 🌄 **Dawn** - Early morning atmosphere
+- 🌙 **Night** - Dark, starry environment
+- 🏭 **Warehouse** - Industrial setting
+- 🌲 **Forest** - Natural woodland scene
+- 🏠 **Apartment** - Indoor home setting
+- 🎬 **Studio** - Professional studio lighting
+- 🏙️ **City** - Urban cityscape
+- 🌳 **Park** - Outdoor park environment
+- 🏛️ **Lobby** - Grand interior space
 
 ## 🛠️ Tech Stack
 
