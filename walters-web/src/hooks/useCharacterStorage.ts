@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { StorageData, CharacterData, ImageData } from '../types';
+import type { StorageData, CharacterData, ImageData, TextData } from '../types';
 import { 
   initDB, 
   saveCharacterData, 
@@ -41,6 +41,7 @@ export const useCharacterStorage = () => {
       character,
       color: '#ff6b6b',
       images: [],
+      texts: [],
     };
   };
 
@@ -66,7 +67,7 @@ export const useCharacterStorage = () => {
   const addImage = async (character: string, url: string) => {
     const currentData = getCharacterDataSync(character);
     const newImage: ImageData = {
-      id: `${Date.now()}-${Math.random()}`,
+      id: `img-${Date.now()}-${Math.random()}`,
       url,
       position: [4, 0, 0],
       scale: 1,
@@ -98,12 +99,51 @@ export const useCharacterStorage = () => {
     await updateCharacter(character, { images: filteredImages });
   };
 
+  const addText = async (character: string, text: string, color: string) => {
+    const currentData = getCharacterDataSync(character);
+    const newText: TextData = {
+      id: `text-${Date.now()}-${Math.random()}`,
+      text,
+      position: [-4, 0, 0],
+      scale: 1,
+      color,
+    };
+    
+    await updateCharacter(character, {
+      texts: [...currentData.texts, newText],
+    });
+  };
+
+  const updateText = async (
+    character: string, 
+    textId: string, 
+    position: [number, number, number], 
+    scale: number
+  ) => {
+    const currentData = getCharacterDataSync(character);
+    const updatedTexts = currentData.texts.map(txt =>
+      txt.id === textId ? { ...txt, position, scale } : txt
+    );
+    
+    await updateCharacter(character, { texts: updatedTexts });
+  };
+
+  const removeText = async (character: string, textId: string) => {
+    const currentData = getCharacterDataSync(character);
+    const filteredTexts = currentData.texts.filter(txt => txt.id !== textId);
+    
+    await updateCharacter(character, { texts: filteredTexts });
+  };
+
   return { 
     getCharacterData: getCharacterDataSync,
     updateCharacter, 
     addImage, 
     updateImage, 
     removeImage,
+    addText,
+    updateText,
+    removeText,
     isLoading
   };
 };

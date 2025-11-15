@@ -170,9 +170,17 @@
   transition: all 0.3s ease;
 }
 
+.text-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
 .image-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+}
+
+.text-button:hover {
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
 .image-input {
@@ -229,6 +237,41 @@
 .image-thumbnail.selected {
   border-color: #667eea;
   box-shadow: 0 0 0 2px #667eea, 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.text-thumbnail {
+  position: relative;
+  min-width: 80px;
+  min-height: 80px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+
+.text-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.text-thumbnail.selected {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px #667eea, 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.text-preview {
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+  word-wrap: break-word;
+  max-width: 100%;
 }
 
 .image-thumbnail img {

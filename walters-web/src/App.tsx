@@ -28,8 +28,9 @@ function App() {
   const [mode, setMode] = useState<Mode>('letters');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [typedText, setTypedText] = useState('');
-  const { getCharacterData, updateCharacter, addImage, updateImage, removeImage } = useCharacterStorage();
+  const { getCharacterData, updateCharacter, addImage, updateImage, removeImage, addText, updateText, removeText } = useCharacterStorage();
   const { background, setBackground } = useAppSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -40,11 +41,13 @@ function App() {
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : currentList.length - 1));
     setSelectedImageId(null);
+    setSelectedTextId(null);
   };
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev < currentList.length - 1 ? prev + 1 : 0));
     setSelectedImageId(null);
+    setSelectedTextId(null);
   };
 
   useEffect(() => {
@@ -64,13 +67,15 @@ function App() {
           handleNext();
         } else if (e.key === 'Delete' && selectedImageId) {
           handleRemoveImage(selectedImageId);
+        } else if (e.key === 'Delete' && selectedTextId) {
+          handleRemoveText(selectedTextId);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, mode, selectedImageId, typedText]);
+  }, [currentIndex, mode, selectedImageId, selectedTextId, typedText]);
 
   const handleModeToggle = () => {
     if (mode === 'letters') {
@@ -83,6 +88,7 @@ function App() {
     }
     setCurrentIndex(0);
     setSelectedImageId(null);
+    setSelectedTextId(null);
   };
 
   const handleColorChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -117,6 +123,22 @@ function App() {
     updateImage(currentCharacter, imageId, position, scale);
   };
 
+  const handleAddText = () => {
+    const text = prompt('Enter text (e.g., "Walter"):');
+    if (text && text.trim()) {
+      addText(currentCharacter, text.trim(), characterData.color);
+    }
+  };
+
+  const handleUpdateText = (textId: string, position: [number, number, number], scale: number) => {
+    updateText(currentCharacter, textId, position, scale);
+  };
+
+  const handleRemoveText = (textId: string) => {
+    removeText(currentCharacter, textId);
+    setSelectedTextId(null);
+  };
+
   const getModeButtonLabel = () => {
     if (mode === 'letters') return '🔤 ABC';
     if (mode === 'numbers') return '🔢 123';
@@ -131,10 +153,14 @@ function App() {
           character={currentCharacter}
           color={characterData.color}
           images={characterData.images}
+          texts={characterData.texts}
           background={background}
           selectedImageId={selectedImageId}
+          selectedTextId={selectedTextId}
           onSelectImage={setSelectedImageId}
+          onSelectText={setSelectedTextId}
           onUpdateImage={handleUpdateImage}
+          onUpdateText={handleUpdateText}
           typedText={typedText}
           typedColors={RAINBOW_COLORS}
         />
@@ -182,8 +208,15 @@ function App() {
               >
                 📷 Add Photo
               </button>
+              <button 
+                className="image-button text-button"
+                onClick={handleAddText}
+              >
+                + Add Text
+              </button>
               <span className="image-count">
                 {characterData.images.length} photo{characterData.images.length !== 1 ? 's' : ''}
+                {characterData.texts.length > 0 && ` • ${characterData.texts.length} text${characterData.texts.length !== 1 ? 's' : ''}`}
               </span>
             </div>
           </div>
@@ -193,7 +226,10 @@ function App() {
               <div 
                 key={img.id} 
                 className={`image-thumbnail ${selectedImageId === img.id ? 'selected' : ''}`}
-                onClick={() => setSelectedImageId(img.id)}
+                onClick={() => {
+                  setSelectedImageId(img.id);
+                  setSelectedTextId(null);
+                }}
               >
                 <img src={img.url} alt="Attached" />
                 <button 
@@ -201,6 +237,29 @@ function App() {
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRemoveImage(img.id);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {characterData.texts.map((txt) => (
+              <div 
+                key={txt.id} 
+                className={`text-thumbnail ${selectedTextId === txt.id ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelectedTextId(txt.id);
+                  setSelectedImageId(null);
+                }}
+              >
+                <div className="text-preview" style={{ color: txt.color }}>
+                  {txt.text}
+                </div>
+                <button 
+                  className="delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveText(txt.id);
                   }}
                 >
                   ×
