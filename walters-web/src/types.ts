@@ -1,4 +1,4 @@
-export type Mode = 'letters' | 'numbers';
+export type Mode = 'letters' | 'numbers' | 'typing';
 
 export type EnvironmentPreset = 
   | 'ocean'

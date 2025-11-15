@@ -3,10 +3,12 @@ import { OrbitControls } from '@react-three/drei';
 import { Character3D } from './Character3D';
 import { InteractiveImage } from './InteractiveImage';
 import { BackgroundScene } from './BackgroundScene';
+import { TypingDisplay } from './TypingDisplay';
 import { Suspense, useRef } from 'react';
-import type { EnvironmentPreset, ImageData } from '../types';
+import type { EnvironmentPreset, ImageData, Mode } from '../types';
 
 interface Scene3DProps {
+  mode: Mode;
   character: string;
   color: string;
   images: ImageData[];
@@ -14,16 +16,21 @@ interface Scene3DProps {
   selectedImageId: string | null;
   onSelectImage: (id: string | null) => void;
   onUpdateImage: (imageId: string, position: [number, number, number], scale: number) => void;
+  typedText?: string;
+  typedColors?: string[];
 }
 
 export const Scene3D = ({ 
+  mode,
   character, 
   color, 
   images,
   background,
   selectedImageId,
   onSelectImage,
-  onUpdateImage
+  onUpdateImage,
+  typedText = '',
+  typedColors = []
 }: Scene3DProps) => {
   const orbitRef = useRef<any>(null);
 
@@ -39,18 +46,25 @@ export const Scene3D = ({
       
       <Suspense fallback={null}>
         <BackgroundScene type={background} />
-        <Character3D character={character} color={color} />
         
-        {images.map((imageData) => (
-          <InteractiveImage
-            key={imageData.id}
-            imageData={imageData}
-            isSelected={selectedImageId === imageData.id}
-            onSelect={() => onSelectImage(imageData.id)}
-            onTransform={(position, scale) => onUpdateImage(imageData.id, position, scale)}
-            orbitControlsRef={orbitRef}
-          />
-        ))}
+        {mode === 'typing' ? (
+          <TypingDisplay text={typedText} colors={typedColors} />
+        ) : (
+          <>
+            <Character3D character={character} color={color} />
+            
+            {images.map((imageData) => (
+              <InteractiveImage
+                key={imageData.id}
+                imageData={imageData}
+                isSelected={selectedImageId === imageData.id}
+                onSelect={() => onSelectImage(imageData.id)}
+                onTransform={(position, scale) => onUpdateImage(imageData.id, position, scale)}
+                orbitControlsRef={orbitRef}
+              />
+            ))}
+          </>
+        )}
       </Suspense>
       
       <OrbitControls 

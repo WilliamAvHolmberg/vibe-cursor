@@ -19,10 +19,16 @@ const BACKGROUNDS: { value: EnvironmentPreset; label: string; emoji: string }[] 
   { value: 'stars', label: 'Starfield', emoji: '⭐' },
 ];
 
+const RAINBOW_COLORS = [
+  '#ff0000', '#ff7f00', '#ffff00', '#00ff00', 
+  '#0000ff', '#4b0082', '#9400d3'
+];
+
 function App() {
   const [mode, setMode] = useState<Mode>('letters');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [typedText, setTypedText] = useState('');
   const { getCharacterData, updateCharacter, addImage, updateImage, removeImage } = useCharacterStorage();
   const { background, setBackground } = useAppSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,24 +49,38 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        handlePrevious();
-      } else if (e.key === 'ArrowRight') {
-        handleNext();
-      } else if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        handleModeToggle();
-      } else if (e.key === 'Delete' && selectedImageId) {
-        handleRemoveImage(selectedImageId);
+      if (mode === 'typing') {
+        if (e.key === 'Backspace') {
+          setTypedText(prev => prev.slice(0, -1));
+        } else if (e.key === 'Escape') {
+          setTypedText('');
+        } else if (e.key.length === 1 && /[a-zA-Z0-9 ]/.test(e.key)) {
+          setTypedText(prev => (prev + e.key.toUpperCase()).slice(0, 15));
+        }
+      } else {
+        if (e.key === 'ArrowLeft') {
+          handlePrevious();
+        } else if (e.key === 'ArrowRight') {
+          handleNext();
+        } else if (e.key === 'Delete' && selectedImageId) {
+          handleRemoveImage(selectedImageId);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, mode, selectedImageId]);
+  }, [currentIndex, mode, selectedImageId, typedText]);
 
   const handleModeToggle = () => {
-    setMode((prev) => (prev === 'letters' ? 'numbers' : 'letters'));
+    if (mode === 'letters') {
+      setMode('numbers');
+    } else if (mode === 'numbers') {
+      setMode('typing');
+      setTypedText('');
+    } else {
+      setMode('letters');
+    }
     setCurrentIndex(0);
     setSelectedImageId(null);
   };
@@ -97,10 +117,17 @@ function App() {
     updateImage(currentCharacter, imageId, position, scale);
   };
 
+  const getModeButtonLabel = () => {
+    if (mode === 'letters') return '🔤 ABC';
+    if (mode === 'numbers') return '🔢 123';
+    return '⌨️ TYPE';
+  };
+
   return (
     <div className="app-container">
       <div className="canvas-container">
         <Scene3D 
+          mode={mode}
           character={currentCharacter}
           color={characterData.color}
           images={characterData.images}
@@ -108,78 +135,88 @@ function App() {
           selectedImageId={selectedImageId}
           onSelectImage={setSelectedImageId}
           onUpdateImage={handleUpdateImage}
+          typedText={typedText}
+          typedColors={RAINBOW_COLORS}
         />
       </div>
 
-      <div className="top-controls">
-        <div className="color-picker-container">
-          <span className="color-picker-label">Color:</span>
-          <input
-            type="color"
-            value={characterData.color}
-            onChange={handleColorChange}
-            className="color-picker"
-          />
-        </div>
+      {mode !== 'typing' && (
+        <>
+          <div className="top-controls">
+            <div className="color-picker-container">
+              <span className="color-picker-label">Color:</span>
+              <input
+                type="color"
+                value={characterData.color}
+                onChange={handleColorChange}
+                className="color-picker"
+              />
+            </div>
 
-        <div className="background-selector-container">
-          <span className="background-label">Background:</span>
-          <select
-            value={background}
-            onChange={handleBackgroundChange}
-            className="background-selector"
-          >
-            {BACKGROUNDS.map((bg) => (
-              <option key={bg.value} value={bg.value}>
-                {bg.emoji} {bg.label}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="background-selector-container">
+              <span className="background-label">Background:</span>
+              <select
+                value={background}
+                onChange={handleBackgroundChange}
+                className="background-selector"
+              >
+                {BACKGROUNDS.map((bg) => (
+                  <option key={bg.value} value={bg.value}>
+                    {bg.emoji} {bg.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="image-controls">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="image-input"
-          />
-          <button 
-            className="image-button"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            📷 Add Photo
-          </button>
-          <span className="image-count">
-            {characterData.images.length} photo{characterData.images.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-      </div>
-
-      <div className="images-panel">
-        {characterData.images.map((img) => (
-          <div 
-            key={img.id} 
-            className={`image-thumbnail ${selectedImageId === img.id ? 'selected' : ''}`}
-            onClick={() => setSelectedImageId(img.id)}
-          >
-            <img src={img.url} alt="Attached" />
-            <button 
-              className="delete-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRemoveImage(img.id);
-              }}
-            >
-              ×
-            </button>
+            <div className="image-controls">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="image-input"
+              />
+              <button 
+                className="image-button"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                📷 Add Photo
+              </button>
+              <span className="image-count">
+                {characterData.images.length} photo{characterData.images.length !== 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
-        ))}
-      </div>
+
+          <div className="images-panel">
+            {characterData.images.map((img) => (
+              <div 
+                key={img.id} 
+                className={`image-thumbnail ${selectedImageId === img.id ? 'selected' : ''}`}
+                onClick={() => setSelectedImageId(img.id)}
+              >
+                <img src={img.url} alt="Attached" />
+                <button 
+                  className="delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveImage(img.id);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="controls-info">
-        {selectedImageId ? (
+        {mode === 'typing' ? (
+          <div className="help-text">
+            ⌨️ Type letters & numbers • Backspace to delete • ESC to clear all
+          </div>
+        ) : selectedImageId ? (
           <div className="help-text">
             💡 Drag to move • Hold SHIFT + drag to resize • Press DELETE to remove • Camera locked
           </div>
@@ -191,18 +228,34 @@ function App() {
       </div>
 
       <div className="controls">
-        <button onClick={handlePrevious} className="nav-button">
-          ←
-        </button>
+        {mode !== 'typing' && (
+          <>
+            <button onClick={handlePrevious} className="nav-button">
+              ←
+            </button>
+            
+            <div className="current-char">{currentCharacter}</div>
+            
+            <button onClick={handleNext} className="nav-button">
+              →
+            </button>
+          </>
+        )}
         
-        <div className="current-char">{currentCharacter}</div>
-        
-        <button onClick={handleNext} className="nav-button">
-          →
-        </button>
+        {mode === 'typing' && (
+          <div className="typing-info">
+            <div className="typed-display">{typedText || '...'}</div>
+            <button 
+              onClick={() => setTypedText('')}
+              className="clear-button"
+            >
+              🗑️ Clear
+            </button>
+          </div>
+        )}
         
         <button onClick={handleModeToggle} className="mode-toggle">
-          {mode === 'letters' ? '🔤 ABC' : '🔢 123'}
+          {getModeButtonLabel()}
         </button>
       </div>
     </div>

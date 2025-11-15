@@ -302,3 +302,42 @@
     transform: translateY(0);
   }
 }
+
+.typing-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.typed-display {
+  font-size: 32px;
+  font-weight: bold;
+  color: #667eea;
+  min-width: 200px;
+  text-align: center;
+  padding: 10px 20px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 12px;
+  letter-spacing: 2px;
+}
+
+.clear-button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.clear-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+}
+
+.clear-button:active {
+  transform: translateY(0);
+}
