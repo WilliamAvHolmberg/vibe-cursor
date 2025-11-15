@@ -300,10 +300,43 @@
   transition: opacity 0.2s ease;
   line-height: 1;
   padding: 0;
+  z-index: 2;
+}
+
+.edit-btn {
+  position: absolute;
+  top: 4px;
+  right: 32px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.9);
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  line-height: 1;
+  padding: 0;
+  z-index: 2;
+}
+
+.text-thumbnail:hover .delete-btn,
+.text-thumbnail:hover .edit-btn {
+  opacity: 1;
 }
 
 .image-thumbnail:hover .delete-btn {
   opacity: 1;
+}
+
+.edit-btn:hover {
+  background: rgba(102, 126, 234, 1);
+  transform: scale(1.1);
 }
 
 .delete-btn:hover {
@@ -383,4 +416,68 @@
 
 .clear-button:active {
   transform: translateY(0);
+}
+
+.text-edit-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 16px 24px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease;
+}
+
+.text-edit-input {
+  flex: 1;
+  min-width: 300px;
+  padding: 12px 16px;
+  border: 2px solid #667eea;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.text-edit-input:focus {
+  border-color: #764ba2;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.save-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.cancel-btn {
+  padding: 12px 20px;
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  background: white;
+  color: #666;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  border-color: #ff0000;
+  color: #ff0000;
+  transform: scale(1.05);
 }

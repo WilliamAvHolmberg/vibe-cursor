@@ -29,10 +29,13 @@ function App() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [editingTextValue, setEditingTextValue] = useState('');
   const [typedText, setTypedText] = useState('');
   const { getCharacterData, updateCharacter, addImage, updateImage, removeImage, addText, updateText, removeText } = useCharacterStorage();
   const { background, setBackground } = useAppSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   const currentList = mode === 'letters' ? LETTERS : NUMBERS;
   const currentCharacter = currentList[currentIndex];
@@ -124,10 +127,40 @@ function App() {
   };
 
   const handleAddText = () => {
-    const text = prompt('Enter text (e.g., "Walter"):');
-    if (text && text.trim()) {
-      addText(currentCharacter, text.trim(), characterData.color);
+    setEditingTextId('new');
+    setEditingTextValue('');
+    setTimeout(() => textInputRef.current?.focus(), 100);
+  };
+
+  const handleEditText = (textId: string, currentText: string) => {
+    setEditingTextId(textId);
+    setEditingTextValue(currentText);
+    setSelectedTextId(textId);
+    setTimeout(() => textInputRef.current?.focus(), 100);
+  };
+
+  const handleSaveText = () => {
+    if (editingTextValue.trim()) {
+      if (editingTextId === 'new') {
+        addText(currentCharacter, editingTextValue.trim(), characterData.color);
+      } else if (editingTextId) {
+        const currentData = getCharacterData(currentCharacter);
+        const textToUpdate = currentData.texts.find(t => t.id === editingTextId);
+        if (textToUpdate) {
+          const updatedTexts = currentData.texts.map(txt =>
+            txt.id === editingTextId ? { ...txt, text: editingTextValue.trim() } : txt
+          );
+          updateCharacter(currentCharacter, { texts: updatedTexts });
+        }
+      }
     }
+    setEditingTextId(null);
+    setEditingTextValue('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTextId(null);
+    setEditingTextValue('');
   };
 
   const handleUpdateText = (textId: string, position: [number, number, number], scale: number) => {
@@ -253,8 +286,17 @@ function App() {
                 }}
               >
                 <div className="text-preview" style={{ color: txt.color }}>
-                  {txt.text}
+                  {editingTextId === txt.id ? editingTextValue : txt.text}
                 </div>
+                <button 
+                  className="edit-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditText(txt.id, txt.text);
+                  }}
+                >
+                  ✏️
+                </button>
                 <button 
                   className="delete-btn"
                   onClick={(e) => {
@@ -271,11 +313,33 @@ function App() {
       )}
 
       <div className="controls-info">
-        {mode === 'typing' ? (
+        {editingTextId ? (
+          <div className="text-edit-panel">
+            <input
+              ref={textInputRef}
+              type="text"
+              value={editingTextValue}
+              onChange={(e) => setEditingTextValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveText();
+                if (e.key === 'Escape') handleCancelEdit();
+              }}
+              placeholder="Type text..."
+              className="text-edit-input"
+              maxLength={30}
+            />
+            <button onClick={handleSaveText} className="save-btn">
+              💾 Save
+            </button>
+            <button onClick={handleCancelEdit} className="cancel-btn">
+              ✕
+            </button>
+          </div>
+        ) : mode === 'typing' ? (
           <div className="help-text">
             ⌨️ Type letters & numbers • Backspace to delete • ESC to clear all
           </div>
-        ) : selectedImageId ? (
+        ) : selectedImageId || selectedTextId ? (
           <div className="help-text">
             💡 Drag to move • Hold SHIFT + drag to resize • Press DELETE to remove • Camera locked
           </div>
