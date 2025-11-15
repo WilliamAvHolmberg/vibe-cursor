@@ -179,9 +179,13 @@ function App() {
       </div>
 
       <div className="controls-info">
-        {selectedImageId && (
+        {selectedImageId ? (
           <div className="help-text">
-            💡 Drag to move • Hold SHIFT + drag to resize • Press DELETE to remove
+            💡 Drag to move • Hold SHIFT + drag to resize • Press DELETE to remove • Camera locked
+          </div>
+        ) : (
+          <div className="help-text help-text-secondary">
+            🎥 Scroll to zoom • Right-click drag to pan
           </div>
         )}
       </div>

@@ -287,6 +287,11 @@
   animation: fadeIn 0.3s ease;
 }
 
+.help-text-secondary {
+  background: rgba(102, 126, 234, 0.7);
+  font-size: 13px;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

@@ -3,7 +3,7 @@ import { OrbitControls } from '@react-three/drei';
 import { Character3D } from './Character3D';
 import { InteractiveImage } from './InteractiveImage';
 import { BackgroundScene } from './BackgroundScene';
-import { Suspense } from 'react';
+import { Suspense, useRef } from 'react';
 import type { EnvironmentPreset, ImageData } from '../types';
 
 interface Scene3DProps {
@@ -25,6 +25,8 @@ export const Scene3D = ({
   onSelectImage,
   onUpdateImage
 }: Scene3DProps) => {
+  const orbitRef = useRef<any>(null);
+
   return (
     <Canvas 
       camera={{ position: [0, 0, 8], fov: 50 }}
@@ -46,11 +48,14 @@ export const Scene3D = ({
             isSelected={selectedImageId === imageData.id}
             onSelect={() => onSelectImage(imageData.id)}
             onTransform={(position, scale) => onUpdateImage(imageData.id, position, scale)}
+            orbitControlsRef={orbitRef}
           />
         ))}
       </Suspense>
       
       <OrbitControls 
+        ref={orbitRef}
+        enabled={!selectedImageId}
         enableZoom={true}
         enablePan={true}
         minDistance={3}

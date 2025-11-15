@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useLoader } from '@react-three/fiber';
 import { TextureLoader } from 'three';
 import { TransformControls } from '@react-three/drei';
@@ -10,17 +10,43 @@ interface InteractiveImageProps {
   isSelected: boolean;
   onSelect: () => void;
   onTransform: (position: [number, number, number], scale: number) => void;
+  orbitControlsRef: React.RefObject<any>;
 }
 
 export const InteractiveImage = ({ 
   imageData, 
   isSelected, 
   onSelect,
-  onTransform 
+  onTransform,
+  orbitControlsRef
 }: InteractiveImageProps) => {
   const meshRef = useRef<THREE.Mesh>(null);
+  const transformRef = useRef<any>(null);
   const texture = useLoader(TextureLoader, imageData.url);
   const [mode, setMode] = useState<'translate' | 'scale'>('translate');
+
+  useEffect(() => {
+    if (transformRef.current && orbitControlsRef.current) {
+      const controls = transformRef.current;
+      const orbit = orbitControlsRef.current;
+
+      const onDragStart = () => {
+        orbit.enabled = false;
+      };
+
+      const onDragEnd = () => {
+        orbit.enabled = false; // Keep disabled while selected
+      };
+
+      controls.addEventListener('dragging-changed', (event: any) => {
+        if (!event.value) {
+          onDragEnd();
+        } else {
+          onDragStart();
+        }
+      });
+    }
+  }, [orbitControlsRef]);
 
   const handleTransform = () => {
     if (meshRef.current) {
@@ -52,6 +78,7 @@ export const InteractiveImage = ({
       
       {isSelected && meshRef.current && (
         <TransformControls
+          ref={transformRef}
           object={meshRef.current}
           mode={mode}
           onMouseDown={() => {
