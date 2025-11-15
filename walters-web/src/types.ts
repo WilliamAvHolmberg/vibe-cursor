@@ -1,16 +1,14 @@
 export type Mode = 'letters' | 'numbers';
 
 export type EnvironmentPreset = 
+  | 'ocean'
+  | 'space'
   | 'sunset'
-  | 'dawn'
-  | 'night'
-  | 'warehouse'
   | 'forest'
-  | 'apartment'
-  | 'studio'
-  | 'city'
-  | 'park'
-  | 'lobby';
+  | 'night'
+  | 'clouds'
+  | 'rainbow'
+  | 'stars';
 
 export interface CharacterData {
   character: string;

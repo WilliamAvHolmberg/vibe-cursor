@@ -9,16 +9,14 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const NUMBERS = '123456789'.split('');
 
 const BACKGROUNDS: { value: EnvironmentPreset; label: string; emoji: string }[] = [
+  { value: 'ocean', label: 'Ocean', emoji: '🌊' },
+  { value: 'space', label: 'Space', emoji: '🚀' },
   { value: 'sunset', label: 'Sunset', emoji: '🌅' },
-  { value: 'dawn', label: 'Dawn', emoji: '🌄' },
-  { value: 'night', label: 'Night', emoji: '🌙' },
-  { value: 'warehouse', label: 'Warehouse', emoji: '🏭' },
   { value: 'forest', label: 'Forest', emoji: '🌲' },
-  { value: 'apartment', label: 'Apartment', emoji: '🏠' },
-  { value: 'studio', label: 'Studio', emoji: '🎬' },
-  { value: 'city', label: 'City', emoji: '🏙️' },
-  { value: 'park', label: 'Park', emoji: '🌳' },
-  { value: 'lobby', label: 'Lobby', emoji: '🏛️' },
+  { value: 'night', label: 'Night Sky', emoji: '🌙' },
+  { value: 'clouds', label: 'Clouds', emoji: '☁️' },
+  { value: 'rainbow', label: 'Rainbow', emoji: '🌈' },
+  { value: 'stars', label: 'Starfield', emoji: '⭐' },
 ];
 
 function App() {

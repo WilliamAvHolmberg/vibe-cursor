@@ -8,9 +8,9 @@ export const useAppSettings = () => {
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (stored) {
       const settings = JSON.parse(stored);
-      return settings.background || 'sunset';
+      return settings.background || 'ocean';
     }
-    return 'sunset';
+    return 'ocean';
   });
 
   useEffect(() => {
