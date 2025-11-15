@@ -1,21 +1,39 @@
 import { useState, useEffect } from 'react';
 import type { EnvironmentPreset } from '../types';
-
-const SETTINGS_KEY = 'walters-web-settings';
+import { initDB, getSetting, saveSetting, migrateFromLocalStorage } from '../lib/db';
 
 export const useAppSettings = () => {
-  const [background, setBackground] = useState<EnvironmentPreset>(() => {
-    const stored = localStorage.getItem(SETTINGS_KEY);
-    if (stored) {
-      const settings = JSON.parse(stored);
-      return settings.background || 'ocean';
-    }
-    return 'ocean';
-  });
+  const [background, setBackgroundState] = useState<EnvironmentPreset>('ocean');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ background }));
-  }, [background]);
+    const loadSettings = async () => {
+      try {
+        await initDB();
+        await migrateFromLocalStorage();
+        
+        const savedBackground = await getSetting('background');
+        if (savedBackground) {
+          setBackgroundState(savedBackground as EnvironmentPreset);
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  return { background, setBackground };
+    loadSettings();
+  }, []);
+
+  const setBackground = async (newBackground: EnvironmentPreset) => {
+    setBackgroundState(newBackground);
+    try {
+      await saveSetting('background', newBackground);
+    } catch (error) {
+      console.error('Failed to save background setting:', error);
+    }
+  };
+
+  return { background, setBackground, isLoading };
 };
