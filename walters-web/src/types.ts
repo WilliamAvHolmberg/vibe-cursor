@@ -10,6 +10,8 @@ export type EnvironmentPreset =
   | 'rainbow'
   | 'stars';
 
+export type AnimalType = 'monkey';
+
 export interface ImageData {
   id: string;
   url: string;
@@ -25,11 +27,24 @@ export interface TextData {
   color: string;
 }
 
+export interface AnimalData {
+  id: string;
+  type: AnimalType;
+  position: [number, number, number];
+  scale: number;
+  colorPalette: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+}
+
 export interface CharacterData {
   character: string;
   color: string;
   images: ImageData[];
   texts: TextData[];
+  animals: AnimalData[];
 }
 
 export interface StorageData {

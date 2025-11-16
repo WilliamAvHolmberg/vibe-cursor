@@ -29,10 +29,11 @@ function App() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [selectedAnimalId, setSelectedAnimalId] = useState<string | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editingTextValue, setEditingTextValue] = useState('');
   const [typedText, setTypedText] = useState('');
-  const { getCharacterData, updateCharacter, addImage, updateImage, removeImage, addText, updateText, removeText } = useCharacterStorage();
+  const { getCharacterData, updateCharacter, addImage, updateImage, removeImage, addText, updateText, removeText, addAnimal, updateAnimal, removeAnimal } = useCharacterStorage();
   const { background, setBackground } = useAppSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
@@ -45,12 +46,14 @@ function App() {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : currentList.length - 1));
     setSelectedImageId(null);
     setSelectedTextId(null);
+    setSelectedAnimalId(null);
   };
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev < currentList.length - 1 ? prev + 1 : 0));
     setSelectedImageId(null);
     setSelectedTextId(null);
+    setSelectedAnimalId(null);
   };
 
   useEffect(() => {
@@ -172,6 +175,33 @@ function App() {
     setSelectedTextId(null);
   };
 
+  const handleUpdateAnimal = (animalId: string, position: [number, number, number], scale: number) => {
+    updateAnimal(currentCharacter, animalId, { position, scale });
+  };
+
+  const handleRemoveAnimal = (animalId: string) => {
+    removeAnimal(currentCharacter, animalId);
+    setSelectedAnimalId(null);
+  };
+
+  const handleUpdateAnimalColors = (primary: string, secondary: string, accent: string) => {
+    if (selectedAnimalId) {
+      updateAnimal(currentCharacter, selectedAnimalId, {
+        colorPalette: { primary, secondary, accent }
+      });
+    }
+  };
+
+  const handleUpdateAnimalSize = (scale: number) => {
+    if (selectedAnimalId) {
+      const currentData = getCharacterData(currentCharacter);
+      const animal = currentData.animals.find(a => a.id === selectedAnimalId);
+      if (animal) {
+        updateAnimal(currentCharacter, selectedAnimalId, { scale });
+      }
+    }
+  };
+
   const getModeButtonLabel = () => {
     if (mode === 'letters') return '🔤 ABC';
     if (mode === 'numbers') return '🔢 123';
@@ -187,13 +217,17 @@ function App() {
           color={characterData.color}
           images={characterData.images || []}
           texts={characterData.texts || []}
+          animals={characterData.animals || []}
           background={background}
           selectedImageId={selectedImageId}
           selectedTextId={selectedTextId}
+          selectedAnimalId={selectedAnimalId}
           onSelectImage={setSelectedImageId}
           onSelectText={setSelectedTextId}
+          onSelectAnimal={setSelectedAnimalId}
           onUpdateImage={handleUpdateImage}
           onUpdateText={handleUpdateText}
+          onUpdateAnimal={handleUpdateAnimal}
           typedText={typedText}
           typedColors={RAINBOW_COLORS}
         />
@@ -247,9 +281,18 @@ function App() {
               >
                 + Add Text
               </button>
+              {currentCharacter === 'A' && (
+                <button 
+                  className="image-button animal-button"
+                  onClick={() => addAnimal(currentCharacter, 'monkey')}
+                >
+                  🐵 Add Monkey
+                </button>
+              )}
               <span className="image-count">
-                {characterData.images?.length} photo{characterData.images.length !== 1 ? 's' : ''}
+                {characterData.images?.length || 0} photo{characterData.images?.length !== 1 ? 's' : ''}
                 {characterData.texts?.length > 0 && ` • ${characterData.texts.length} text${characterData.texts.length !== 1 ? 's' : ''}`}
+                {characterData.animals?.length > 0 && ` • ${characterData.animals.length} animal${characterData.animals.length !== 1 ? 's' : ''}`}
               </span>
             </div>
           </div>
@@ -308,12 +351,90 @@ function App() {
                 </button>
               </div>
             ))}
+            {characterData.animals?.map((animal) => (
+              <div 
+                key={animal.id} 
+                className={`animal-thumbnail ${selectedAnimalId === animal.id ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelectedAnimalId(animal.id);
+                  setSelectedImageId(null);
+                  setSelectedTextId(null);
+                }}
+              >
+                <div className="animal-preview">
+                  🐵
+                </div>
+                <button 
+                  className="delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveAnimal(animal.id);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
         </>
       )}
 
       <div className="controls-info">
-        {editingTextId ? (
+        {selectedAnimalId ? (
+          <div className="animal-config-panel">
+            <div className="config-label">🐵 Monkey Config:</div>
+            {(() => {
+              const animal = characterData.animals?.find(a => a.id === selectedAnimalId);
+              if (!animal) return null;
+              return (
+                <>
+                  <div className="color-config">
+                    <label>
+                      Body:
+                      <input
+                        type="color"
+                        value={animal.colorPalette.primary}
+                        onChange={(e) => handleUpdateAnimalColors(e.target.value, animal.colorPalette.secondary, animal.colorPalette.accent)}
+                        className="mini-color-picker"
+                      />
+                    </label>
+                    <label>
+                      Face:
+                      <input
+                        type="color"
+                        value={animal.colorPalette.secondary}
+                        onChange={(e) => handleUpdateAnimalColors(animal.colorPalette.primary, e.target.value, animal.colorPalette.accent)}
+                        className="mini-color-picker"
+                      />
+                    </label>
+                    <label>
+                      Eyes:
+                      <input
+                        type="color"
+                        value={animal.colorPalette.accent}
+                        onChange={(e) => handleUpdateAnimalColors(animal.colorPalette.primary, animal.colorPalette.secondary, e.target.value)}
+                        className="mini-color-picker"
+                      />
+                    </label>
+                  </div>
+                  <div className="size-config">
+                    <label>Size:</label>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="5"
+                      step="0.1"
+                      value={animal.scale}
+                      onChange={(e) => handleUpdateAnimalSize(parseFloat(e.target.value))}
+                      className="size-slider"
+                    />
+                    <span className="size-value">{animal.scale.toFixed(1)}x</span>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        ) : editingTextId ? (
           <div className="text-edit-panel">
             <input
               ref={textInputRef}
@@ -339,7 +460,7 @@ function App() {
           <div className="help-text">
             ⌨️ Type letters & numbers • Backspace to delete • ESC to clear all
           </div>
-        ) : selectedImageId || selectedTextId ? (
+        ) : selectedImageId || selectedTextId || selectedAnimalId ? (
           <div className="help-text">
             💡 Drag to move • Hold SHIFT + drag to resize • Press DELETE to remove • Camera locked
           </div>

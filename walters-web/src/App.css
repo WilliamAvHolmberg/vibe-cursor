@@ -174,6 +174,10 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
+.animal-button {
+  background: linear-gradient(135deg, #ff9a56 0%, #ff6a00 100%);
+}
+
 .image-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
@@ -181,6 +185,10 @@
 
 .text-button:hover {
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.animal-button:hover {
+  box-shadow: 0 4px 15px rgba(255, 154, 86, 0.4);
 }
 
 .image-input {
@@ -480,4 +488,106 @@
   border-color: #ff0000;
   color: #ff0000;
   transform: scale(1.05);
+}
+
+.animal-thumbnail {
+  position: relative;
+  min-width: 80px;
+  min-height: 80px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.animal-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.animal-thumbnail.selected {
+  border-color: #ff9a56;
+  box-shadow: 0 0 0 2px #ff9a56, 0 4px 12px rgba(255, 154, 86, 0.4);
+}
+
+.animal-preview {
+  font-size: 40px;
+}
+
+.animal-thumbnail:hover .delete-btn {
+  opacity: 1;
+}
+
+.animal-config-panel {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px 30px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease;
+}
+
+.config-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ff9a56;
+}
+
+.color-config {
+  display: flex;
+  gap: 15px;
+}
+
+.color-config label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  align-items: center;
+}
+
+.mini-color-picker {
+  width: 50px;
+  height: 50px;
+  border: 2px solid white;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.size-config {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.size-config label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.size-slider {
+  width: 150px;
+  height: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.size-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #667eea;
+  min-width: 50px;
+  text-align: center;
 }

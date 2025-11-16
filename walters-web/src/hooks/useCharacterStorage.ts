@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import type { StorageData, CharacterData, ImageData, TextData } from '../types';
+import type { StorageData, CharacterData, ImageData, TextData, AnimalData, AnimalType } from '../types';
 import { 
   initDB, 
   saveCharacterData, 
   getAllCharacterData,
   migrateFromLocalStorage 
 } from '../lib/db';
+import { defaultColorPalettes } from '../lib/animalDefinitions';
 
 export const useCharacterStorage = () => {
   const [data, setData] = useState<StorageData>({});
@@ -42,6 +43,7 @@ export const useCharacterStorage = () => {
       color: '#ff6b6b',
       images: [],
       texts: [],
+      animals: [],
     };
   };
 
@@ -135,6 +137,41 @@ export const useCharacterStorage = () => {
     await updateCharacter(character, { texts: filteredTexts });
   };
 
+  const addAnimal = async (character: string, type: AnimalType) => {
+    const currentData = getCharacterDataSync(character);
+    const newAnimal: AnimalData = {
+      id: `animal-${Date.now()}-${Math.random()}`,
+      type,
+      position: [0, -2, 0],
+      scale: 2,
+      colorPalette: defaultColorPalettes[type],
+    };
+    
+    await updateCharacter(character, {
+      animals: [...currentData.animals, newAnimal],
+    });
+  };
+
+  const updateAnimal = async (
+    character: string, 
+    animalId: string, 
+    updates: Partial<AnimalData>
+  ) => {
+    const currentData = getCharacterDataSync(character);
+    const updatedAnimals = currentData.animals.map(animal =>
+      animal.id === animalId ? { ...animal, ...updates } : animal
+    );
+    
+    await updateCharacter(character, { animals: updatedAnimals });
+  };
+
+  const removeAnimal = async (character: string, animalId: string) => {
+    const currentData = getCharacterDataSync(character);
+    const filteredAnimals = currentData.animals.filter(animal => animal.id !== animalId);
+    
+    await updateCharacter(character, { animals: filteredAnimals });
+  };
+
   return { 
     getCharacterData: getCharacterDataSync,
     updateCharacter, 
@@ -144,6 +181,9 @@ export const useCharacterStorage = () => {
     addText,
     updateText,
     removeText,
+    addAnimal,
+    updateAnimal,
+    removeAnimal,
     isLoading
   };
 };
