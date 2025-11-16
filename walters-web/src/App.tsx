@@ -185,8 +185,8 @@ function App() {
           mode={mode}
           character={currentCharacter}
           color={characterData.color}
-          images={characterData.images}
-          texts={characterData.texts}
+          images={characterData.images || []}
+          texts={characterData.texts || []}
           background={background}
           selectedImageId={selectedImageId}
           selectedTextId={selectedTextId}
@@ -248,8 +248,8 @@ function App() {
                 + Add Text
               </button>
               <span className="image-count">
-                {characterData.images.length} photo{characterData.images.length !== 1 ? 's' : ''}
-                {characterData.texts.length > 0 && ` • ${characterData.texts.length} text${characterData.texts.length !== 1 ? 's' : ''}`}
+                {characterData.images?.length} photo{characterData.images.length !== 1 ? 's' : ''}
+                {characterData.texts?.length > 0 && ` • ${characterData.texts.length} text${characterData.texts.length !== 1 ? 's' : ''}`}
               </span>
             </div>
           </div>
@@ -276,7 +276,7 @@ function App() {
                 </button>
               </div>
             ))}
-            {characterData.texts.map((txt) => (
+            {characterData.texts?.map((txt) => (
               <div 
                 key={txt.id} 
                 className={`text-thumbnail ${selectedTextId === txt.id ? 'selected' : ''}`}

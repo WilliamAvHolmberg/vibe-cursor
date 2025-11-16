@@ -110,7 +110,7 @@ export const useCharacterStorage = () => {
     };
     
     await updateCharacter(character, {
-      texts: [...currentData.texts, newText],
+      texts: [...currentData.texts ?? [], newText],
     });
   };
 
